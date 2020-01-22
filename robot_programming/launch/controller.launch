@@ -1,0 +1,8 @@
+<launch> 
+	<!-- launch the throvald controller -->
+	<node pkg="robot_programming" name="topo_nav_planner" type="topo_nav_planner.py" output="screen"/>
+ 
+	<!-- launch the machine vision nodes -->
+	<include file="$(find robot_programming)/launch/weed_segmentation.launch"/>
+
+</launch>

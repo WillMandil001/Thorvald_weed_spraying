@@ -1,0 +1,7 @@
+<launch> 
+	<!-- launch the machine vision weed segmentation node -->
+	<node pkg="robot_programming" name="vision_controller" type="vision_controller.py" output="screen"/>
+
+	<!-- launch the machine vision mapping node -->
+	<node pkg="robot_programming" name="weed_mapper" type="weed_mapper.py" output="screen"/>
+</launch>

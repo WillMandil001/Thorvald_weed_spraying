@@ -1,0 +1,11 @@
+<launch>
+
+	<!-- Launch thorvald-sim -->
+	<include file="$(find uol_cmp9767m_base)/launch/thorvald-sim.launch"/>
+
+	<!-- launch the navigation package move_base with the topo nav args-->
+	<include file="$(find uol_cmp9767m_tutorial)/launch/move_base_topo_nav.launch"/>
+
+	<include file="$(find uol_cmp9767m_tutorial)/launch/topo_nav.launch"/>
+
+</launch>
