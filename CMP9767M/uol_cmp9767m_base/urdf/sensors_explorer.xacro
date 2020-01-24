@@ -263,7 +263,7 @@
   <xacro:property name="kinect2_name" value="kinect2" />
   <xacro:property name="kinect2_cam_px" value="0.45" />
   <xacro:property name="kinect2_cam_py" value="0.0" />
-  <xacro:property name="kinect2_cam_pz" value="0.5" />
+  <xacro:property name="kinect2_cam_pz" value="20.5" />
   <xacro:property name="kinect2_cam_or" value="0.0" />
   <xacro:property name="kinect2_cam_op" value="${M_PI/2}" />
   <xacro:property name="kinect2_cam_oy" value="-${M_PI/2}" />
@@ -325,7 +325,7 @@
         </image>
         <clip>
           <near>0.1</near>
-          <far>8.0</far>
+          <far>100.0</far>
         </clip>
         <noise>
           <!-- Noise is sampled independently per pixel on each frame.
@@ -347,7 +347,7 @@
         <!--<depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>-->
         <frameName>${kinect2_name}_depth_optical_frame</frameName>
         <pointCloudCutoff>0.5</pointCloudCutoff>
-        <pointCloudCutoffMax>8.0</pointCloudCutoffMax>
+        <pointCloudCutoffMax>100.0</pointCloudCutoffMax>
         <baseline>0.1</baseline>
         <distortionK1>0.0</distortionK1>
         <distortionK2>0.0</distortionK2>
@@ -372,7 +372,7 @@
         </image>
         <clip>
           <near>0.02</near>
-          <far>10.0</far>
+          <far>100.0</far>
         </clip>
         <noise>
           <!-- Noise is sampled independently per pixel on each frame.

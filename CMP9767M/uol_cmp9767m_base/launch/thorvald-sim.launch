@@ -8,7 +8,7 @@
   <arg name="map_server" default="true" doc="provide a tf link between map and world and run a map server (default: false)"/>
   <arg name="gui" default="true" doc="run with visible gazebo"/>
   <arg name="obstacles" default="false" doc="run with human walking around"/>
-  <arg name="second_robot" default="false" doc="launch a second Thorvald" />
+  <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
   
   <!-- Launch the Gazebo world.  -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch" unless="$(arg obstacles)">
@@ -29,9 +29,8 @@
     <arg name="x" value="-8" />
     <arg name="y" value="-3.2" />
   </include>
-  <include file="$(find uol_cmp9767m_base)/launch/thorvald.launch" if="$(arg second_robot)">
+  <include file="$(find uol_cmp9767m_base)/launch/thorvald_explorer.launch" if="$(arg explorer_robot)">
     <arg name="robot_name" value="thorvald_002" />
-    <arg name="x" value="-5.0" />
   </include>
 
   <group if="$(arg world_tf)">
@@ -44,7 +43,7 @@
       name="world_tf_thorvald_002"
       pkg="tf"
       type= "static_transform_publisher"
-      args="0 0 0 0 0 0 /world /thorvald_002/odom 100"  if="$(arg second_robot)"/>
+      args="0 0 0 0 0 0 /world /thorvald_002/odom 100"  if="$(arg explorer_robot)"/>
   </group>
   <group if="$(arg map_server)">
     <node 
