@@ -12,16 +12,14 @@ from geometry_msgs.msg import PoseStamped, PoseArray
 from cv_bridge import CvBridge, CvBridgeError
 from visualization_msgs.msg import MarkerArray, Marker
 
-import math
-
 
 ########################################################################################################################
-
 #  TODO:
 # 1. need to divide the image into multiple squares.
 # 2. get pixel values instead of draw line :D
 # 3. then make histogram from the pixel values 
 ########################################################################################################################
+
 
 class convert_to_topo_nav():
     def __init__(self):
@@ -51,28 +49,34 @@ class convert_to_topo_nav():
 
     def calculate_crop_rows(self, cv_image):
         # 1. divide image up into set of square images for histogram analysis on each.
-        # crop_img = img[y:y+h, x:x+w]  # USE THIS TO CROP IMAGES INTO HOWEVER MANY WE WANT
+        imgx_l = cv_image.shape[1]
+        imgy_h = cv_image.shape[0]
+        box_size = 200
+        prev_point_l = 0
+        prev_point_h = 0
+        for i in range(0, imgx_l, box_size):
+            for j in range(0, imgy_h, box_size):
+                print("i = ", i, "j = ", j)
+                image_square = cv_image[i:(i+box_size), j:(j+box_size)]      
+                # 1. Find center of image.
+                imgx = (image_square.shape[1] / 2)
+                imgy = (image_square.shape[0] / 2)
 
-        # 1. Find center of image.
-        imgx = (cv_image.shape[1] / 2)
-        imgy = (cv_image.shape[0] / 2)
+                # 2. Calculate lines for each angle (0, 179) degrees and do for 
+                for angle in range(0, 180):
+                    angle_rad = (angle * math.pi) / 180
+                    r = 100  # R = LENGTH OF LINE DRAWN. JUST NEEDS TO BE LONGER THAN THE EDGES OF THE image_square
+                    for a in range(-r, r + 1, max(1, int((r * 2)))):
+                        xcirc = imgx + a * math.cos(angle_rad)
+                        ycirc = imgy + a * math.sin(angle_rad)
+                        cv2.line(image_square, (int(imgx), int(imgy)), (int(xcirc), int(ycirc)), (100, 100, 100), thickness=1, lineType=8)
 
-        # 2. Calculate lines for each angle (0, 179) degrees and do for 
-        for angle in range(0, 180):
-            angle_rad = (angle * math.pi) / 180
-            r = 10000  # R = LENGTH OF LINE DRAWN. JUST NEEDS TO BE LONGER THAN THE EDGES OF THE IMAGE
-            for a in range(-r, r + 1, max(1, int((r * 2)))):
-                xcirc = imgx + a * math.cos(angle_rad)
-                ycirc = imgy + a * math.sin(angle_rad)
-                cv2.line(cv_image, (int(imgx), int(imgy)), (int(xcirc), int(ycirc)), (100, 100, 100), thickness=1, lineType=8)
-
-        # 3. buld histogram from sum of white pixels in line.
-
-        cv2.imshow("cv_image", cv_image)
-        k = cv2.waitKey(0)
-        if k ==27:
-            pass
-        cv2.destroyAllWindows()
+                cv2.imshow("image_square", image_square)
+                k = cv2.waitKey(0)
+                if k ==27:
+                    break
+                cv2.destroyAllWindows()
+                    # 3. buld histogram from sum of white pixels in line.
 
 
 if __name__ == '__main__':
