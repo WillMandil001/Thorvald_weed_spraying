@@ -6,6 +6,7 @@ import tf2_ros
 import rospy
 import numpy as np
 import image_geometry
+import copy
 from matplotlib import pyplot as plt
 
 from std_msgs.msg import String
@@ -72,18 +73,12 @@ class convert_to_topo_nav():
                     angle_rad = (angle * math.pi) / 180
                     r = 100  # R = LENGTH OF LINE DRAWN. JUST NEEDS TO BE LONGER THAN THE EDGES OF THE image_square
                     for a in range(-r, r + 1, max(1, int((r * 2)))):
-                        xcirc = imgx + a * math.cos(angle_rad)
-                        ycirc = imgy + a * math.sin(angle_rad)
-                        points = self.createLineIterator((int(imgx), int(imgy)), (int(xcirc), int(ycirc)), image_square)
-                        histo += sum(points[:, 2])
-                    histogram.append(histo)
-                    angles.append(angle)
+                      print a
+                        # xcirc = imgx + a * math.cos(angle_rad)
+                        # ycirc = imgy + a * math.sin(angle_rad)
+                        # points = self.createLineIterator((int(imgx), int(imgy)), (int(xcirc), int(ycirc)), image_square)
+                        # histo += sum(points[:, 2])
 
-                plt.bar(angles, histogram, align='center', alpha=0.5)
-                plt.xticks(angles, histogram)
-                plt.ylabel('Usage')
-                plt.title('Programming language usage')
-                plt.show()
 
                 cv2.imshow("image_square", image_square)
                 k = cv2.waitKey(0)
@@ -92,73 +87,61 @@ class convert_to_topo_nav():
                 cv2.destroyAllWindows()
                 # 3. buld histogram from sum of white pixels in line.
 
+    def perpendicular_cumulative_sections(self, cv_image):
+        imgx = (cv_image.shape[1] / 2)
+        imgy = (cv_image.shape[0] / 2)
 
-    def createLineIterator(self, P1, P2, image_square):
-       imageH = image_square.shape[0]
-       imageW = image_square.shape[1]
-       P1X = P1[0]
-       P1Y = P1[1]
-       P2X = P2[0]
-       P2Y = P2[1]
+        # 2. Calculate lines for each angle (0, 179) degrees and do for 
+        perpendicular_cumulative_section = []
+        angles = []
+        point = []
+        for angle in range(0, 180, 10):
+            cv_image_copy_1 = np.zeros([cv_image.shape[0], cv_image.shape[1]]) + angle + 1
+            angle_rad = (angle * math.pi) / 180
+            r = 1000
+            for a in range(-r, r + 1, max(1, int((r * 2)))):
+                xcirc = imgx + a * math.cos(angle_rad)
+                ycirc = imgy + a * math.sin(angle_rad)
+                cv_image_copy_1 = cv2.line(cv_image_copy_1, (int(imgx), int(imgy)), (int(xcirc), int(ycirc)), angle, 1)
+                # cv_image_copy_2 = cv2.line(cv_image_copy_2, (int(imgx), int(imgy)), (int(xcirc), int(ycirc)), 200, 1)
 
-       #difference and absolute difference between points
-       #used to calculate slope and relative location between points
-       dX = P2X - P1X
-       dY = P2Y - P1Y
-       dXa = np.abs(dX)
-       dYa = np.abs(dY)
+            indices = np.where(cv_image_copy_1 == angle)
+            n = 20  # How often to take perpendicular line segment
+            cumulative_list = []
+            for i in range(0, len(indices[0])):
+                if i % n == 1:
+                    cv_image_copy_2 = np.zeros([cv_image.shape[0], cv_image.shape[1]])
+                    for b in range(-r, r + 1, max(1, int((r * 2)))):
+                        xcirc_1 = indices[1][i] + b * math.cos(angle_rad - (math.pi / 2))
+                        ycirc_1 = indices[0][i] + b * math.sin(angle_rad - (math.pi / 2))
+                        cv_image_copy_2 = cv2.line(cv_image_copy_2, (int(indices[1][i]), int(indices[0][i])), (int(xcirc_1), int(ycirc_1)), 100, 1)
+                        # cv_image_copy_2[indices[0][i], indices[1][i]] = 200
+                    coordinates = np.where(cv_image_copy_2 == 100)
+                    sum = 0
+                    for coord in range(0, len(coordinates[0])):
+                        if cv_image[coordinates[0][coord], coordinates[1][coord]] == 255:
+                            # cv_image = cv2.circle(cv_image, (coordinates[1][coord], coordinates[0][coord]), 10, 100, 2)
+                            # cumulative.append(coordinates[0][coord], coordinates[1][coord], angle)
+                            sum += 1
+                    cumulative_list.append(sum)
 
-       #predefine numpy array for output based on distance between points
-       itbuffer = np.empty(shape=(np.maximum(dYa,dXa),3),dtype=np.float32)
-       itbuffer.fill(np.nan)
-
-       #Obtain coordinates along the line using a form of Bresenham's algorithm
-       negY = P1Y > P2Y
-       negX = P1X > P2X
-       if P1X == P2X: #vertical line segment
-           itbuffer[:,0] = P1X
-           if negY:
-               itbuffer[:,1] = np.arange(P1Y - 1,P1Y - dYa - 1,-1)
-           else:
-               itbuffer[:,1] = np.arange(P1Y+1,P1Y+dYa+1)              
-       elif P1Y == P2Y: #horizontal line segment
-           itbuffer[:,1] = P1Y
-           if negX:
-               itbuffer[:,0] = np.arange(P1X-1,P1X-dXa-1,-1)
-           else:
-               itbuffer[:,0] = np.arange(P1X+1,P1X+dXa+1)
-       else: #diagonal line segment
-           steepSlope = dYa > dXa
-           if steepSlope:
-               slope = dX/dY
-               if negY:
-                   itbuffer[:,1] = np.arange(P1Y-1,P1Y-dYa-1,-1)
-               else:
-                   itbuffer[:,1] = np.arange(P1Y+1,P1Y+dYa+1)
-               itbuffer[:,0] = (slope*(itbuffer[:,1]-P1Y)).astype(np.int) + P1X
-           else:
-               slope = dY/dX
-               if negX:
-                   itbuffer[:,0] = np.arange(P1X-1,P1X-dXa-1,-1)
-               else:
-                   itbuffer[:,0] = np.arange(P1X+1,P1X+dXa+1)
-               itbuffer[:,1] = (slope*(itbuffer[:,0]-P1X)).astype(np.int) + P1Y
-
-       #Remove points outside of image
-       colX = itbuffer[:,0]
-       colY = itbuffer[:,1]
-       itbuffer = itbuffer[(colX >= 0) & (colY >=0) & (colX<imageW) & (colY<imageH)]
-
-       #Get intensities from image_square ndarray
-       itbuffer[:,2] = image_square[itbuffer[:,1].astype(np.uint),itbuffer[:,0].astype(np.uint)]
-
-       return itbuffer
+            print("angle: ", angle, "cumulative_list: ", cumulative_list)
+            perpendicular_cumulative_section.append(cumulative_list)
+            # cv2.imshow("cv_image", cv_image)
+            # k = cv2.waitKey(0)
+            # if k ==27:
+            #     break
+        for i in range(0, len(perpendicular_cumulative_section), 2):
+            plt.plot(perpendicular_cumulative_section[i])
+            plt.ylabel(('angle: ' + str(i)))
+        plt.show()
 
 if __name__ == '__main__':
     rospy.init_node('convert_to_topo_nav', anonymous=True)
     convert = convert_to_topo_nav()
     raw_image = convert.import_image()
     no_soil_image = convert.remove_soil(raw_image)
-    convert.calculate_crop_rows(no_soil_image)
+    # convert.calculate_crop_rows(no_soil_image)
+    convert.perpendicular_cumulative_sections(no_soil_image)
 
 
