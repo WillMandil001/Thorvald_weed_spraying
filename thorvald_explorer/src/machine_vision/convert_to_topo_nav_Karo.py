@@ -52,6 +52,7 @@ class convert_to_topo_nav():
         cv2.imshow("Canny edges", edges)
         # Keep copies of the original images for later processing
         edges_working_copy = copy.deepcopy(edges)
+        no_soil_working_copy = copy.deepcopy(cv_image)
 
         # Find the best hough lines from the edges
         for i in range(0, 100):
@@ -67,16 +68,71 @@ class convert_to_topo_nav():
                     x2 = int(x0 - 10000*(-b))
                     y2 = int(y0 - 10000*(a))
                     # Resulting lines are drawn onto the original image for visualisation
-                    cv2.line(cv_image,(x1,y1),(x2,y2),(50,50,100), 5)
+                    cv2.line(no_soil_working_copy,(x1,y1),(x2,y2),(50,50,100), 5)
                     # And we draw over the 'found' edges in black
                     cv2.line(edges_working_copy,(x1,y1),(x2,y2),(0,0,255), 15)
             except:
                 break
 
-        cv2.imshow("Original image with hough lines", cv_image)
+        cv2.imshow("Original image with hough lines", no_soil_working_copy)
         k = cv2.waitKey(0)
         cv2.destroyAllWindows()
         return dilation, edges
+
+    def canny_hough_sections(self,img):
+        # Pre-processing on the input image
+        visualisation = copy.deepcopy(img)
+        kernel = np.ones((10,10),np.uint8)
+        dilation = cv2.dilate(img,kernel,iterations = 1)
+
+        imgx_l = img.shape[0]
+        imgy_h = img.shape[1]
+        box_size = 90
+        prev_point_l = 0
+        prev_point_h = 0
+        # iterate kernel over the image
+        for i in range(0, imgx_l, box_size):
+            for j in range(0, imgy_h, box_size):
+                image_square = dilation[i:(i+box_size), j:(j+box_size)]
+                cv2.rectangle(visualisation, (j,i), (j+box_size, i+box_size), (50,50,100), 1)
+                if np.nonzero(image_square)[0].size > 0:
+                    # find canny edges in kernel
+                    edges_square = cv2.Canny(image_square,100,200)
+
+                    for l in range(0, 10):
+                        try:
+                            #lines = cv2.HoughLinesP(edges_square,1,np.pi/90,10,10)
+                            lines = cv2.HoughLines(edges_square,1,np.pi/90,30)
+                            #for x1,y1,x2,y2 in lines[0]:
+
+                            for rho,theta in lines[0]:
+                                a = np.cos(theta)
+                                b = np.sin(theta)
+                                x0 = a*rho
+                                y0 = b*rho
+                                direction = np.argmin([abs(x0),abs(y0)])
+                                x1 = int(x0 + 1*(-b))
+                                y1 = int(y0 + 1*(a))
+                                x2 = int(x0 - 10*(-b))
+                                y2 = int(y0 - 10*(a))
+                                if direction == 0:
+                                    x2 = box_size
+                                    length = (x0 - x2) / (-b)
+                                    y2 = int(y0 - length*(a))
+                                else:
+                                    y2 = box_size
+                                    length = (y0 - box_size) / (a)
+                                    x2 = int(x0 - length*(-b))
+                                # draw over the 'found' edges in black
+                                cv2.line(edges_square,(x1,y1),(x2,y2),(0,0,255), 4)
+                                # Resulting lines are drawn onto the original image for visualisation
+                                cv2.line(visualisation,(j+x1,i+y1),(j+x2,i+y2),(50,50,100), 2)
+                        except:
+                            break
+
+        cv2.imshow("Original image with hough lines derived from segments", visualisation)
+        k = cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def pca_on_full_image(self, img, img_label):
         # pca performed on the full image (could take dilation or edges as input)
@@ -108,7 +164,7 @@ class convert_to_topo_nav():
 
         imgx_l = img.shape[0]
         imgy_h = img.shape[1]
-        box_size = 80
+        box_size = 150
         prev_point_l = 0
         prev_point_h = 0
         # iterate kernel over the image
@@ -136,8 +192,8 @@ class convert_to_topo_nav():
 
                         projection_pca1 = (int(square_centre[0] + (vector_scale*x_v1)), int(square_centre[1] + (vector_scale*y_v1)))
                         projection_pca2 = (int(square_centre[0] + (vector_scale*x_v2)), int(square_centre[1] + vector_scale*y_v2))
-                        cv2.line(pca_img, square_centre, projection_pca1, (50,50,100), 5)
-                        cv2.line(pca_img, square_centre, projection_pca2, (50,50,100), 5)
+                        cv2.line(pca_img, square_centre, projection_pca1, (50,50,100), 3)
+                        cv2.line(pca_img, square_centre, projection_pca2, (50,50,100), 3)
                     except:
                         pass
         title = "PCA on smaller kernels across image '{}'"
@@ -153,7 +209,8 @@ if __name__ == '__main__':
     raw_image = convert.import_image()
     no_soil_image = convert.remove_soil(raw_image)
     dilation, edges = convert.canny_hough_rows(no_soil_image)
-    convert.pca_on_full_image(dilation, 'dilation')
+    convert.canny_hough_sections(no_soil_image)
+    #convert.pca_on_full_image(dilation, 'dilation')
     convert.pca_on_full_image(edges, 'edges')
     convert.pca_on_kernels(dilation, 'dilation')
     convert.pca_on_kernels(edges, 'edges')
