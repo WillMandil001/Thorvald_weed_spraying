@@ -61,6 +61,9 @@
   <build_depend>velodyne_gazebo_plugins8</build_depend>
   <build_depend>kinect2_description</build_depend>
 
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
   <build_export_depend>nav_msgs</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
