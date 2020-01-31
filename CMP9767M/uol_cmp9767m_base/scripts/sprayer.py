@@ -26,19 +26,21 @@ BOX_SDF="""
       </inertial>
       <collision name="collision">
         <geometry>
-          <box>
-            <size>.1 .1 .01</size>
-          </box>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.005</length>
+          </cylinder>
         </geometry>
       </collision>
       <visual name="visual">
         <geometry>
-          <box>
-            <size>.1 .1 .01</size>
-          </box>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.005</length>
+          </cylinder>
         </geometry>
         <material>
-            <ambient>1 0 0 1</ambient>
+            <emissive>1 0 0 1</emissive>
         </material>
       </visual>
     </link>
