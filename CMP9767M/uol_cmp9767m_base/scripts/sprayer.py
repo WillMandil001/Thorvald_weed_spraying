@@ -68,10 +68,12 @@ class Sprayer:
         request.initial_pose.orientation.w = 1.0
         request.initial_pose.position.y = r.y_diff
 
+        res = y_axes_diffResponse()
+        res.spray_completed = True
 
         # rospy.sleep(0.5)
         self.spawner(request)
-        return True
+        return res
 
 if __name__ == "__main__":
     rospy.init_node('sprayer')
