@@ -47,7 +47,7 @@ class Sprayer():
 
         # Iterate every detected Weed
         for point in data.points:
-        	# pos of robot
+            # pos of robot
             x_robot = trans[0] 
             y_robot = trans[1]
             # Difference in 'x' and 'y' frame
@@ -56,14 +56,14 @@ class Sprayer():
             # Deside to spray
             if dx < 0.01 and abs(dy) < 0.5:
                 if point not in self.sprayed:
-                	# calculate euclidean dist between robot and weed
-                	dist = math.sqrt(math.pow(x_robot - point.x)+ math.pow(y_robot - point.y))
-                    self.sprayed.append(point) #add point in sprayed array
+                    # calculate euclidean dist between robot and weed
+                    dist = math.sqrt(math.pow(x_robot - point.x,2)+ math.pow(y_robot - point.y,2))
+                    self.sprayed.append(point)  # add point in sprayed array
                     # save the position of the sprayer (visualise in rviz)
                     real_point = Point32(x_robot, y_robot - dist, point.z) 
                     self.real_sprayed.append(real_point)
                     
-                    print('spray!!!')
+                    print('spray!!!', dy, dist)
                     # TODO delay()
                     req = y_axes_diffRequest()
                     req.y_diff = dy
