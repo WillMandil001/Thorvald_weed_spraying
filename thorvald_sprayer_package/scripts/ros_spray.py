@@ -15,6 +15,8 @@ class Sprayer():
         self.robot = robot
         self.sprayed = []  # Keep a list of sprayed points
         self.real_sprayed = []
+        self.last_spray_pos = 0
+
         self.spray_srv = rospy.ServiceProxy(
             "{}/dynamic_sprayer".format(self.robot),
             y_axes_diff)
@@ -32,6 +34,12 @@ class Sprayer():
             PointCloud,
             queue_size=5)
 
+    def slep(self, current_distance):
+
+        total_travel_time = 1
+        slep_time = current_distance/total_travel_time
+        rospy.sleep(slep_time)
+        last_spray_pos = 
 
     def spray_weed_callback(self, data):
         time = rospy.Time(0)
@@ -62,9 +70,9 @@ class Sprayer():
                     # save the position of the sprayer (visualise in rviz)
                     real_point = Point32(x_robot, y_robot - dist, point.z) 
                     self.real_sprayed.append(real_point)
-                    
-                    print('spray!!!', dy, dist)
-                    # TODO delay()
+                    # when sprayer moves sleep for travel time
+                    self.slep(dy)
+                    print('I sprayied!!!', dy, dist)
                     req = y_axes_diffRequest()
                     req.y_diff = dy
                     self.spray_srv(req)
