@@ -39,7 +39,7 @@ class Sprayer():
         total_travel_time = 1
         slep_time = current_distance/total_travel_time
         rospy.sleep(slep_time)
-        last_spray_pos = 
+        last_spray_pos = 0
 
     def spray_weed_callback(self, data):
         time = rospy.Time(0)
@@ -71,7 +71,7 @@ class Sprayer():
                     real_point = Point32(x_robot, y_robot - dist, point.z) 
                     self.real_sprayed.append(real_point)
                     # when sprayer moves sleep for travel time
-                    self.slep(dy)
+                    # self.slep(dy)
                     print('I sprayied!!!', dy, dist)
                     req = y_axes_diffRequest()
                     req.y_diff = dy
