@@ -36,7 +36,7 @@ class Sprayer():
 
     def slep(self, sprayer_distance):
 
-        total_travel_speed = 10
+        total_travel_speed = 2
         slep_time = sprayer_distance/total_travel_speed
         rospy.sleep(slep_time)
 
@@ -48,61 +48,53 @@ class Sprayer():
                 'map',
                 '{}/sprayer'.format(self.robot),
                 data.header.stamp)
-            # print(trans, rot)
         except Exception:
             return
         
         # First initialise current_y_sprayer = result from tf
         current_y_sprayer = trans[1] # it's going to be updated according to the place it travels to.
 
-        print("bich lasagnia")
         # Iterate every detected Weed
-        # for point in data.points:
-        # pos of robot
-        x_sprayer = trans[0] 
+        for point in data.points:
+	        # pos of robot
+	        x_sprayer = trans[0] 
 
-        # Difference in 'x' and 'y' frame
-        # dx = abs(x_sprayer - point.x)
-        # dy = current_y_sprayer - point.y  # this creates mirror effect
+	        # Difference in 'x' and 'y' frame
+	        dx = abs(x_sprayer - point.x)
+	        dy = current_y_sprayer - point.y  # this creates mirror effect
 
-        dx = abs(x_sprayer - (-2.5))
-        dy = current_y_sprayer - (-7.15)  # this creates mirror effect
-        
-        # Deside to spray
-        print("yeah")
+	        # Deside to spray
+	        if abs(trans[1]-point.y) < 0.5:
+	            #find distance between point and current sprayer position
+	            sprayer_dist = current_y_sprayer - point.y
+	            print("I found weed with distance, ", current_y_sprayer, point.y, sprayer_dist)
+	            # when sprayer moves sleep for travel time
+	            # self.slep(sprayer_dist)
 
-        if abs(dy) < 0.5:
-            #find distance between point and current sprayer position
-            sprayer_dist = current_y_sprayer - (-7.15) #point.y
-            print("I found weed with distance, ", sprayer_dist, current_y_sprayer)
-            # when sprayer moves sleep for travel time
-            self.slep(sprayer_dist)
+	            # After moving (sleeping) update the current sprayer position to it's new position
+	            current_y_sprayer = point.y
 
-            # After moving (sleeping) update the current sprayer position to it's new position
-            current_y_sprayer = (-7.5) #point.y
+	            if dx < 0.01:
+	                if point not in self.sprayed:
+		                # calculate euclidean dist between robot and weed
+		                # dist = math.sqrt(math.pow(x_sprayer - point.x,2)+ math.pow(y_sprayer - point.y,2))
 
-            if dx < 0.05 and abs(dy) < 0.5:
-                # if point not in self.sprayed:
-                # calculate euclidean dist between robot and weed
-                # dist = math.sqrt(math.pow(x_sprayer - point.x,2)+ math.pow(y_sprayer - point.y,2))
+		                self.sprayed.append(point)  # add point in sprayed array
+		                # save the position of the sprayer (visualise in rviz)
+		                #TODO fix mirroring
+		                real_point = Point32(x_sprayer, current_y_sprayer, point.z) 
+		                self.real_sprayed.append(real_point)
 
-                # self.sprayed.append(point)  # add point in sprayed array
-                # save the position of the sprayer (visualise in rviz)
-                #TODO fix mirroring
-                real_point = Point32(x_sprayer,  dy, 0)#point.z) 
-                self.real_sprayed.append(real_point)
+		                req = y_axes_diffRequest()
+		                req.y_diff = dy
+		                self.spray_srv(req)
+		                print('I sprayied!!!', dy)
 
-
-                req = y_axes_diffRequest()
-                req.y_diff = dy
-                self.spray_srv(req)
-                print('I sprayied!!!', dy)
-
-        # Publish the Sprayed Points
-        self.sprayed_points_msg.points = self.real_sprayed
-        self.sprayed_points_msg.header.frame_id = 'map'
-        self.sprayed_points_msg.header.stamp = time
-        self.sprayed_points_pub.publish(self.sprayed_points_msg)    
+	        # Publish the Sprayed Points
+	        self.sprayed_points_msg.points = self.real_sprayed
+	        self.sprayed_points_msg.header.frame_id = 'map'
+	        self.sprayed_points_msg.header.stamp = time
+	        self.sprayed_points_pub.publish(self.sprayed_points_msg)    
 
 if __name__ == '__main__':
     rospy.init_node('spray_node', anonymous=True)
