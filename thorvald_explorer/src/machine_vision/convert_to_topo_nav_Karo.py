@@ -4,17 +4,18 @@ import cv2
 import tf2_ros
 import rospy
 import numpy as np
+#!/usr/bin/env python
+import tf
+import cv2
+import tf2_ros
+import rospy
+import numpy as np
 import image_geometry
 import copy
-import scipy.misc
 from matplotlib import pyplot as plt
-from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PoseStamped, PoseArray
 from cv_bridge import CvBridge, CvBridgeError
-from visualization_msgs.msg import MarkerArray, Marker
-
-import math
+import bresenham
 
 class convert_to_topo_nav():
     def __init__(self):
@@ -42,13 +43,81 @@ class convert_to_topo_nav():
         opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         return opening
 
-    def canny_hough_rows(self,cv_image):
-        # Pre-processing on the input image
+    def dilate(self, img):
         kernel = np.ones((10,10),np.uint8)
-        dilation = cv2.dilate(cv_image,kernel,iterations = 1)
-        cv2.imshow("Pre-processed image", dilation)
-        # Compute canny edges on the processed image
-        edges = cv2.Canny(dilation,100,200)
+        dilation = cv2.dilate(img,kernel,iterations = 1)
+        return dilation
+
+    def find_lines_at_different_granularity(self, img):
+        acc = np.zeros(img.shape) # initialise empty image to visualise the results
+
+        box_sizes = [500,120,100,80,70,60,50,40,30] # the levels of granilarity in pixels
+        row_height = img.shape[0]
+        column_length = img.shape[1]
+
+        for size in box_sizes:
+            # TODO: The threshold can be tuned and could also be adjusted to each granularity level
+            threshold = 30 # number of 'votes' required for hough line detection
+            for i in range(0, row_height, size): # iterate the window across the image
+                for j in range(0, column_length, size):
+                    corners1 = (i, j) # top left corners of squares, in row and column format
+                    corners2 = (i+size//2, j+size//2) # a second square of the same size, shifted by half length down and right (overlapping grid)
+                    square1 = img[corners1[0]:min(row_height-1, corners1[0]+size), corners1[1]:min(column_length-1, corners1[1]+size)]
+                    square2 = img[corners2[0]:min(row_height-1, corners2[0]+size), corners2[1]:min(column_length-1, corners2[1]+size)]
+
+                    legal_squares = [s for s in [square1,square2] if np.product(s.shape) > 0] # in case square 1 is beyond image dimensions, it is dropped
+                    legal_corners = [corners1,corners2] if len(legal_squares) > 1 else [corners1]
+                    for square,corner in zip(legal_squares,legal_corners):
+
+                        if np.nonzero(square)[0].size > 0:
+                            inf_lines, segments = self.find_straight_lines(square, threshold)
+                            if inf_lines is not None:
+                                for line in inf_lines:
+                                    for rho,theta in line:
+                                        a = np.cos(theta)
+                                        b = np.sin(theta)
+                                        x0 = a*rho
+                                        y0 = b*rho
+                                        x1 = int(x0 + size*2*(-b))# coordinates in cartesian
+                                        y1 = int(y0 + size*2*(a))
+                                        x2 = int(x0 - size*2*(-b))
+                                        y2 = int(y0 - size*2*(a))
+
+                                        line_endpoint = self.calculate_line_endpoints(x1,y1,x2,y2,size)
+                                        # Resulting lines are added to the accumulation image
+                                        # All pixels along that line are increased
+                                        pixels = bresenham.bresenham(min(corner[1]+line_endpoint[0][0],column_length-1), min(corner[0]+line_endpoint[0][1], row_height-1), min(corner[1]+line_endpoint[1][0],column_length-1) , min(corner[0]+line_endpoint[1][1], row_height-1))
+                                        for x,y in pixels:
+                                            acc[y,x] += 1
+        plt.imshow(acc)
+        plt.show()
+        return acc
+
+    def find_straight_lines(self, img, threshold):
+        edges = cv2.Canny(img,100,200)
+        # Find hough lines from the edges
+        inf_lines = cv2.HoughLines(edges,1,np.pi/90,threshold)
+        line_segments = cv2.HoughLines(edges,1,np.pi/90,90,10,50)
+        return inf_lines, line_segments
+
+    def calculate_line_endpoints(self,x1,y1,x2,y2,size):
+        inter_pixels = np.array(list(bresenham.bresenham(x1,y1,x2,y2)))
+        loc1 =  inter_pixels[np.argwhere(inter_pixels[:,0] == 0),:]
+        loc2 =  inter_pixels[np.argwhere(inter_pixels[:,1] == 0),:]
+        loc3 =  inter_pixels[np.argwhere(inter_pixels[:,0] == size),:]
+        loc4 =  inter_pixels[np.argwhere(inter_pixels[:,1] == size),:]
+        locations = [(loc[0,0,0],loc[0,0,1]) for loc in [loc1,loc2,loc3,loc4] if loc.size > 0]
+        endpoints = list(set(locations))
+        endpoints = [point for point in endpoints if point[0] >= 0]
+        endpoints = [point for point in endpoints if point[1] >= 0]
+        endpoints = [point for point in endpoints if point[0] <= size]
+        endpoints = [point for point in endpoints if point[1] <= size]
+        cleaned_endpoints = sorted(endpoints)
+        return cleaned_endpoints
+
+
+    def single_pass_canny_hough(self,img):
+        edges = cv2.Canny(img,100,200)
         cv2.imshow("Canny edges", edges)
         # Keep copies of the original images for later processing
         edges_working_copy = copy.deepcopy(edges)
@@ -77,64 +146,9 @@ class convert_to_topo_nav():
         cv2.imshow("Original image with hough lines", no_soil_working_copy)
         k = cv2.waitKey(0)
         cv2.destroyAllWindows()
-        return dilation, edges
+        return edges
 
-    def canny_hough_sections(self,img):
-        # Pre-processing on the input image
-        visualisation = copy.deepcopy(img)
-        kernel = np.ones((10,10),np.uint8)
-        dilation = cv2.dilate(img,kernel,iterations = 1)
-
-        imgx_l = img.shape[0]
-        imgy_h = img.shape[1]
-        box_size = 90
-        prev_point_l = 0
-        prev_point_h = 0
-        # iterate kernel over the image
-        for i in range(0, imgx_l, box_size):
-            for j in range(0, imgy_h, box_size):
-                image_square = dilation[i:(i+box_size), j:(j+box_size)]
-                cv2.rectangle(visualisation, (j,i), (j+box_size, i+box_size), (50,50,100), 1)
-                if np.nonzero(image_square)[0].size > 0:
-                    # find canny edges in kernel
-                    edges_square = cv2.Canny(image_square,100,200)
-
-                    for l in range(0, 10):
-                        try:
-                            #lines = cv2.HoughLinesP(edges_square,1,np.pi/90,10,10)
-                            lines = cv2.HoughLines(edges_square,1,np.pi/90,30)
-                            #for x1,y1,x2,y2 in lines[0]:
-
-                            for rho,theta in lines[0]:
-                                a = np.cos(theta)
-                                b = np.sin(theta)
-                                x0 = a*rho
-                                y0 = b*rho
-                                direction = np.argmin([abs(x0),abs(y0)])
-                                x1 = int(x0 + 1*(-b))
-                                y1 = int(y0 + 1*(a))
-                                x2 = int(x0 - 10*(-b))
-                                y2 = int(y0 - 10*(a))
-                                if direction == 0:
-                                    x2 = box_size
-                                    length = (x0 - x2) / (-b)
-                                    y2 = int(y0 - length*(a))
-                                else:
-                                    y2 = box_size
-                                    length = (y0 - box_size) / (a)
-                                    x2 = int(x0 - length*(-b))
-                                # draw over the 'found' edges in black
-                                cv2.line(edges_square,(x1,y1),(x2,y2),(0,0,255), 4)
-                                # Resulting lines are drawn onto the original image for visualisation
-                                cv2.line(visualisation,(j+x1,i+y1),(j+x2,i+y2),(50,50,100), 2)
-                        except:
-                            break
-
-        cv2.imshow("Original image with hough lines derived from segments", visualisation)
-        k = cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-    def pca_on_full_image(self, img, img_label):
+    def peincipal_component_analysis(self, img, img_label):
         # pca performed on the full image (could take dilation or edges as input)
         y, x = np.nonzero(img)
         x = x - np.mean(x)
@@ -158,59 +172,14 @@ class convert_to_topo_nav():
         plt.title("PCA on full image '%s'" % img_label)
         plt.show()
 
-    def pca_on_kernels(self, img, img_label):
-        # PCA performed on smaller sections of images
-        pca_img = copy.deepcopy(img)
-
-        imgx_l = img.shape[0]
-        imgy_h = img.shape[1]
-        box_size = 150
-        prev_point_l = 0
-        prev_point_h = 0
-        # iterate kernel over the image
-        for i in range(0, imgx_l, box_size):
-            for j in range(0, imgy_h, box_size):
-                image_square = img[i:(i+box_size), j:(j+box_size)]
-                cv2.rectangle(pca_img, (j,i), (j+box_size, i+box_size), (50,50,100), 1)
-                # find principal components in kernel
-                y, x = np.nonzero(image_square)
-                if y.size > 0:
-                    # If there are any nonzero pixels, find principal component
-                    x = x - np.mean(x)
-                    y = y - np.mean(y)
-                    coords = np.vstack([x, y])
-                    cov = np.cov(coords)
-                    try:
-                        evals, evecs = np.linalg.eig(cov)
-                        sort_indices = np.argsort(evals)[::-1]
-                        x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-                        x_v2, y_v2 = evecs[:, sort_indices[1]]
-                        # TODO: Rotate the vectors to point in positive direction...?
-
-                        square_centre = (j + box_size/2, i + box_size/2)
-                        vector_scale = 50 # Only relevant for visualisation purposes
-
-                        projection_pca1 = (int(square_centre[0] + (vector_scale*x_v1)), int(square_centre[1] + (vector_scale*y_v1)))
-                        projection_pca2 = (int(square_centre[0] + (vector_scale*x_v2)), int(square_centre[1] + vector_scale*y_v2))
-                        cv2.line(pca_img, square_centre, projection_pca1, (50,50,100), 3)
-                        cv2.line(pca_img, square_centre, projection_pca2, (50,50,100), 3)
-                    except:
-                        pass
-        title = "PCA on smaller kernels across image '{}'"
-        cv2.imshow(title.format(img_label), pca_img)
-        k = cv2.waitKey(0)
-        if k ==27:
-            pass
-        cv2.destroyAllWindows()
-
 if __name__ == '__main__':
     rospy.init_node('convert_to_topo_nav', anonymous=True)
     convert = convert_to_topo_nav()
     raw_image = convert.import_image()
     no_soil_image = convert.remove_soil(raw_image)
-    dilation, edges = convert.canny_hough_rows(no_soil_image)
-    convert.canny_hough_sections(no_soil_image)
-    #convert.pca_on_full_image(dilation, 'dilation')
-    convert.pca_on_full_image(edges, 'edges')
-    convert.pca_on_kernels(dilation, 'dilation')
-    convert.pca_on_kernels(edges, 'edges')
+    dilation = convert.dilate(no_soil_image)
+    cv2.imshow("dilated image", dilation)
+    k = cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    Line_accumulation = convert.find_lines_at_different_granularity(dilation)
