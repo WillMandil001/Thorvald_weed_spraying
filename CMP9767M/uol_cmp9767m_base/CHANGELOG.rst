@@ -2,6 +2,16 @@
 Changelog for package uol_cmp9767m_base
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.3 (2019-12-03)
+------------------
+* disable actor collisions
+* Contributors: Marc Hanheide
+
+0.5.2 (2019-11-18)
+------------------
+* Merge branch 'master' into mapping
+* Contributors: gcielniak
+
 0.5.1 (2019-10-29)
 ------------------
 * added switches for fake localisation (`#42 <https://github.com/LCAS/CMP9767M/issues/42>`_)

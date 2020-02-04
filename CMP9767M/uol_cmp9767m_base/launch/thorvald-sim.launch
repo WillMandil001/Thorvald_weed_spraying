@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="world_name" default="$(find uol_cmp9767m_base)/worlds/cmp9767m_2.world"/>
   <arg name="fake_localisation" default="false" doc="fake the localisation, sets map_server and world_tf to true."/>
   <!-- <arg name="world_tf" default="$(arg fake_localisation)" doc="provide a tf link to the world (default: false)"/> -->
   <arg name="world_tf" default="true" doc="provide a tf link to the world (default: false)"/>
@@ -9,11 +10,11 @@
   <arg name="gui" default="true" doc="run with visible gazebo"/>
   <arg name="obstacles" default="false" doc="run with human walking around"/>
   <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
-  
+
   <!-- Launch the Gazebo world.  -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch" unless="$(arg obstacles)">
     <arg name="use_sim_time" default="true"/>
-    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_2.world"/>
+    <arg name="world_name" value="$(arg world_name)"/>
     <arg name="gui" value="$(arg gui)" />
   </include>
 
@@ -34,24 +35,24 @@
   </include>
 
   <group if="$(arg world_tf)">
-    <node 
+    <node
       name="world_tf_thorvald_001"
       pkg="tf"
       type= "static_transform_publisher"
       args="0 0 0 0 0 0 /world /thorvald_001/odom 100" />
-    <node 
+    <node
       name="world_tf_thorvald_002"
       pkg="tf"
       type= "static_transform_publisher"
       args="0 0 0 0 0 0 /world /thorvald_002/odom 100"  if="$(arg explorer_robot)"/>
   </group>
   <group if="$(arg map_server)">
-    <node 
+    <node
       name="map_server"
       pkg="map_server"
       type= "map_server"
       args="$(find uol_cmp9767m_base)/maps/cropped.yaml" />
-    <node 
+    <node
       name="world_tf_map"
       pkg="tf"
       type= "static_transform_publisher"
