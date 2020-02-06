@@ -13,8 +13,8 @@ class Sprayer():
 
     def __init__(self, robot):
         self.robot = robot
-        self.sprayed = []  # Keep a list of sprayed points
-        self.real_sprayed = []
+        self.sprayed = []  # Keep a list of sprayed points for rviz
+        self.real_sprayed = [] #
         self.last_spray_pos = 0
 
         self.spray_srv = rospy.ServiceProxy(
@@ -35,13 +35,13 @@ class Sprayer():
 
         self.sprayed_points_msg = PointCloud()
         self.sprayed_points_pub = rospy.Publisher(
-            "/weed/sprayed_points/{}".format(self.robot),
+            "{}/weed/sprayed_points/".format(self.robot),
             PointCloud,
             queue_size=5)
 
     def slep(self, sprayer_distance):
 
-        total_travel_speed = 2
+        total_travel_speed = 5
         slep_time = sprayer_distance / total_travel_speed
         rospy.sleep(slep_time)
 
@@ -69,34 +69,42 @@ class Sprayer():
             dx = abs(x_sprayer - point.x)
             dy = current_y_sprayer - point.y  # this creates mirror effect
 
-            # Deside to spray
+            # If you see any weeds in current crop line
+            # (crop line has a width of 1 meter thats why <0.5)
             if abs(trans[1] - point.y) < 0.5:
-                # find distance between point and current sprayer position
-                sprayer_dist = current_y_sprayer - point.y
-                print("I found weed with distance, ",
-                      current_y_sprayer, point.y, sprayer_dist)
+            	# TODO smart spray
+
+                # find difference distance between point and current sprayer position
+                # sprayer_dist = current_y_sprayer - point.y
+                # print("I found weed with distance, ",
+                #       current_y_sprayer, point.y, sprayer_dist)
                 
-                # when sprayer moves sleep for travel time
-                # self.slep(sprayer_dist)
+                # When sprayer moves, sleep for travel time
+                #self.slep(sprayer_dist)
 
                 # After moving (sleeping) update the current sprayer position to it's new position
                 current_y_sprayer = point.y
 
-                if dx < 0.01:
+                if dx < 0.04: # Same as killbox radius
                     if point not in self.sprayed:
-                        # calculate euclidean dist between robot and weed
-                        # dist = math.sqrt(math.pow(x_sprayer - point.x,2)+ math.pow(y_sprayer - point.y,2))
 
-                        # add point in sprayed array
-                        self.sprayed.append(point)
-                        # save the position of the sprayer (visualise in rviz)
                         # TODO fix mirroring
+                        # TODO if spray radius hits many points add them to the real_sprayed points
+
+                    	# add point in sprayed array
+                        self.sprayed.append(point)
+
+                        # save the position of the sprayer (visualise in rviz)
                         real_point = Point32(
                             x_sprayer, current_y_sprayer, point.z)
                         self.real_sprayed.append(real_point)
 
+                        # Initialise request and assign to it the difference in y axis
+                        # between the sprayer and the weed
                         req = y_axes_diffRequest()
                         req.y_diff = dy
+
+                        # Call service to spray
                         self.spray_srv(req)
                         print('I sprayied!!!', dy)
 
@@ -109,7 +117,7 @@ class Sprayer():
 
 if __name__ == '__main__':
     rospy.init_node('spray_node', anonymous=True)
-    Sprayer('thorvald_001')
+    Sprayer('thorvald_002')
     try:
         rospy.spin()
     except KeyboardInterrupt:
