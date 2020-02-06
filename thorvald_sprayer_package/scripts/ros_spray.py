@@ -80,7 +80,7 @@ class Sprayer():
                 #       current_y_sprayer, point.y, sprayer_dist)
                 
                 # When sprayer moves, sleep for travel time
-                self.slep(sprayer_dist)
+                #self.slep(sprayer_dist)
 
                 # After moving (sleeping) update the current sprayer position to it's new position
                 current_y_sprayer = point.y
