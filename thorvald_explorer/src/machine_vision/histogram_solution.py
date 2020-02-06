@@ -198,6 +198,8 @@ class convert_to_topo_nav():
             pass
         cv2.destroyAllWindows()
 
+    def HERE
+
     def cluster_analysis(self, peaks, maxgap):
         mean_peak_list = []
         peaks.sort()
