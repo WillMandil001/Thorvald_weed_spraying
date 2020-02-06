@@ -9,6 +9,9 @@
   <arg name="map_server" default="true" doc="provide a tf link between map and world and run a map server (default: false)"/>
   <arg name="gui" default="true" doc="run with visible gazebo"/>
   <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
+  <!--  nothing arg is only to run simulation with 3 crop lines-->
+  <arg name="nothing" default="true" />
+
   
   <!-- testing scenarios -->
   <arg name="test1" default="false" doc="provide test world 1 as map(default: false)"/>
@@ -17,6 +20,11 @@
   <arg name="test4" default="false" doc="provide test world 4 as map(default: false)"/>
 
   <!-- Launch the Gazebo world.  -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg nothing)">
+    <arg name="use_sim_time" default="true"/>
+    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_2.world"/>
+    <arg name="gui" value="$(arg gui)" />
+  </include>
   <!-- launch testing scenario worlds -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg test1)">
     <arg name="use_sim_time" default="true"/>
