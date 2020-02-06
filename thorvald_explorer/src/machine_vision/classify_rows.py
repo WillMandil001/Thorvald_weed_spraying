@@ -1,10 +1,12 @@
 import numpy as np
 import rospy
 import pdb
+from sensor_msgs.msg import PointCloud
 
 class classify_rows():
 	def __init__(self):
-		pass
+		self.waypoints = rospy.wait_for_message("/way_points/pointcloud", PointCloud)
+		
 
 	def classify(self, waypoints, max_dist):
 		# INPUT: a list of lists holding image coordinates (row, column)
@@ -42,5 +44,5 @@ class classify_rows():
 
 if __name__ == '__main__':
 	cr = classify_rows()
-	rows = cr.classify([[1,2],[2,1],[2,3],[6,6],[7,7]], 2)
+	rows = cr.classify(cr.waypoints, 20)
 	print(rows)
