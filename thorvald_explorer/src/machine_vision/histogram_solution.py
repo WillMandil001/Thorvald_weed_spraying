@@ -2,35 +2,27 @@
 import tf
 import cv2
 import sys
+import copy
 import math
 import rospy
 import tf2_ros
 import operator
 import itertools
+
 import numpy as np
-import image_geometry
-import copy
-from matplotlib import pyplot as plt
 import matplotlib.pyplot as plt
-from scipy.misc import electrocardiogram
-from scipy.signal import find_peaks
-            
 
-
+from cv_bridge import CvBridge, CvBridgeError
+from matplotlib import pyplot as plt
+from scipy.signal import find_peaks            
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PoseStamped, PoseArray
-from cv_bridge import CvBridge, CvBridgeError
+from geometry_msgs.msg import PoseStamped, PoseArray, Point
 from visualization_msgs.msg import MarkerArray, Marker
 
 
-########################################################################################################################
-#  TODO:
-# 1. need to divide the image into multiple squares.
-# 2. get pixel values instead of draw line :D
-# 3. then make histogram from the pixel values 
-########################################################################################################################
-
+from sensor_msgs.msg import PointCloud
+from geometry_msgs.msg import Point32
 
 class convert_to_topo_nav():
     def __init__(self):
@@ -40,11 +32,15 @@ class convert_to_topo_nav():
         self.tf2listener = tf2_ros.TransformListener(self.tf2Buffer)
         self.br = tf.TransformBroadcaster()
         self.camera_info = rospy.wait_for_message('/thorvald_002/kinect2_camera/hd/camera_info', CameraInfo)
-        self.camera_model = image_geometry.PinholeCameraModel()
+        self.pub_weed_pointcloud = rospy.Publisher("/way_points/pointcloud", PointCloud, queue_size=1)
+        self.wp_point_cloud = PointCloud()
+        self.weed_point_cloud.header.frame_id = 'map'
         self.camera_model.fromCameraInfo(self.camera_info)
+        self.camera_height = 20.5
 
     def import_image(self):
         image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
+        self.last_ts = image.header.stamp
         cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
         return cv_image
 
@@ -152,6 +148,7 @@ class convert_to_topo_nav():
         indices = np.where(cv_image_copy_1 == 150)
         n = 20  # How often to take perpendicular line segment
         cumulative_list = []
+        wp_pose_list = []
         for i in range(0, len(indices[0])):
             if i % n == 1:
                 cv_image_copy_2 = np.zeros([cv_image.shape[0], cv_image.shape[1]])
@@ -191,14 +188,32 @@ class convert_to_topo_nav():
                     for pk in mean_peak_list:
                         radius = 5
                         color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3) 
-   
+                        wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
+
+        self.visualization_of_waypoints(wp_pose_list)
+
+        while not rospy.is_shutdown():
+            self.pub_weed_pointcloud.publish(self.weed_point_cloud)
+            rate.sleep()
+
         cv2.imshow("color_image", color_image)
         k = cv2.waitKey(0)
         if k == 27:
             pass
         cv2.destroyAllWindows()
 
-    def HERE
+    def visualization_of_waypoints(self, wp_list):
+        for wp_xy in wp_list:
+            wp = Point()
+            wp.x = wp_xy[0]
+            wp.y = wp_xy[1]
+            wp.z = 0
+            self.wp_point_cloud.points.append(wp)
+
+    def convert_to_world_pose(self, pose):
+        uv = self.camera_model.projectPixelTo3dRay(self.camera_model.rectifyPoint(pose))
+        way_point_world = [(uv[0] * self.camera_height), (uv[1] * self.camera_height)]
+        return way_point_world
 
     def cluster_analysis(self, peaks, maxgap):
         mean_peak_list = []
