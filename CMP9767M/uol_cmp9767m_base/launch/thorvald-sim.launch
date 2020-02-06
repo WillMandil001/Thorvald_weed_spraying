@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="world_name" default="$(find uol_cmp9767m_base)/worlds/cmp9767m_2.world"/>
+  <arg name="world_name" default="$(find uol_cmp9767m_base)/worlds/cmp9767m_paper_4.world"/>
   <arg name="fake_localisation" default="false" doc="fake the localisation, sets map_server and world_tf to true."/>
   <!-- <arg name="world_tf" default="$(arg fake_localisation)" doc="provide a tf link to the world (default: false)"/> -->
   <arg name="world_tf" default="true" doc="provide a tf link to the world (default: false)"/>

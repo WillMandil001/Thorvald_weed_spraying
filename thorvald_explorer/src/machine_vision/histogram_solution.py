@@ -9,6 +9,7 @@ import tf2_ros
 import operator
 import itertools
 import image_geometry
+import pdb
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,6 +39,7 @@ class convert_to_topo_nav():
         self.camera_model = image_geometry.PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
         self.camera_height = 20.5
+        self.wp_interval = 10
 
     def import_image(self):
         image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
@@ -147,11 +149,11 @@ class convert_to_topo_nav():
             cv_image_copy_1 = cv2.line(cv_image_copy_1, (int(imgx), int(imgy)), (int(xcirc), int(ycirc)), 150, 1)
 
         indices = np.where(cv_image_copy_1 == 150)
-        n = 20  # How often to take perpendicular line segment
         cumulative_list = []
         wp_pose_list = []
+        wp_pixel_list = []
         for i in range(0, len(indices[0])):
-            if i % n == 1:
+            if i % self.wp_interval == 1:
                 cv_image_copy_2 = np.zeros([cv_image.shape[0], cv_image.shape[1]])
                 for b in range(-r, r + 1, max(1, int((r * 2)))):
                     xcirc_1 = indices[1][i] + b * math.cos(angle_rad - (math.pi / 2))
@@ -188,21 +190,63 @@ class convert_to_topo_nav():
                 if len(peaks) != 0:
                     for pk in mean_peak_list:
                         radius = 5
-                        color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3) 
+                        # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3) 
                         wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
+                        wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
+        rows = self.classify(wp_pixel_list, 2.1*self.wp_interval)
+        for row in rows:
+            colour = np.random.rand(3,) * 150
+            for point in row:
+                color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
+        print rows
         self.visualization_of_waypoints(wp_pose_list)
 
-        rate = rospy.Rate(10)
-        while not rospy.is_shutdown():
-            self.pub_weed_pointcloud.publish(self.wp_point_cloud)
-            rate.sleep()
+        # rate = rospy.Rate(10)
+        # while not rospy.is_shutdown():
+        #     self.pub_weed_pointcloud.publish(self.wp_point_cloud)
+        #     rate.sleep()
 
         cv2.imshow("color_image", color_image)
         k = cv2.waitKey(0)
         if k == 27:
             pass
         cv2.destroyAllWindows()
+
+    def euclidean_dist(self,a,b,x,y):
+        xdiff = b - y
+        ydiff = a - x
+        distance = np.sqrt((xdiff**2) + (ydiff**2))
+        return distance
+
+    def classify(self, waypoints, max_dist):
+        # INPUT: a list of lists holding image coordinates (row, column)
+        # OUPUT: Image pixels classified into lists for each crop row
+        rows = [] # initialise an empty list of lists to store the single rows
+        row_count = -1 # to keep track of the current class
+        next_to_check = [] # to keep track of which other points within the same class need to be examinred before moving on 
+        
+        while len(waypoints) > 0:
+            if len(next_to_check) == 0:
+                # Move on to a new starting point if the current thread is fully explored
+                rows.append([]) # open a new class (or row)
+                next_to_check.append(waypoints[0]) # pick a new point to examine
+                row_count += 1
+                rows[row_count].append(waypoints[0]) # add the new point to the new row
+                del waypoints[0] # remove the point from the remaining
+
+            (r,c) = next_to_check[0]
+
+            distances = [self.euclidean_dist(r,c,waypoints[i][0],waypoints[i][1]) for i in range(len(waypoints))]
+            ind = np.argwhere(np.array(distances) < max_dist)
+            indeces = np.reshape(ind, [ind.shape[0],])
+            if len(indeces) > 0:
+                for element in indeces[::-1]:
+                    rows[row_count].append(waypoints[element])
+                    next_to_check.append(waypoints[element])
+                    del waypoints[element]
+            del(next_to_check[0])
+        return rows
 
     def visualization_of_waypoints(self, wp_list):
         for wp_xy in wp_list:
