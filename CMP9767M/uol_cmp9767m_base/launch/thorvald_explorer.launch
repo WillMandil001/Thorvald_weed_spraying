@@ -8,8 +8,8 @@
   <arg name="robot_model" default="$(find uol_cmp9767m_base)/config/robot.yaml"/>
 
   
-  <!-- <arg name="model_extras" default="$(find uol_cmp9767m_base)/urdf/sensors.xacro"/> -->
-  <arg name="model_extras" default="$(find uol_cmp9767m_base)/urdf/sensors_explorer.xacro"/>
+  <arg name="model_extras" default="$(find uol_cmp9767m_base)/urdf/sensors.xacro"/> 
+  <!-- <arg name="model_extras" default="$(find uol_cmp9767m_base)/urdf/sensors_explorer.xacro"/> -->
 
   <group ns="$(arg robot_name)">
 
