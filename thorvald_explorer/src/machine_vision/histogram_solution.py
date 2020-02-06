@@ -17,13 +17,11 @@ from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks            
 from std_msgs.msg import String
+from sensor_msgs.msg import PointCloud
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PoseStamped, PoseArray, Point
+from geometry_msgs.msg import PoseStamped, PoseArray, Point,Point32
 from visualization_msgs.msg import MarkerArray, Marker
 
-
-from sensor_msgs.msg import PointCloud
-from geometry_msgs.msg import Point32
 
 class convert_to_topo_nav():
     def __init__(self):
@@ -270,7 +268,6 @@ class convert_to_topo_nav():
                 groups[-1].append(x)
             else:
                 groups.append([x])
-
         for p in groups:
             mean_peak_list.append(sum(p) / len(p))
 
