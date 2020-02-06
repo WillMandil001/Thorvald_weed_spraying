@@ -8,10 +8,10 @@ import rospy
 import tf2_ros
 import operator
 import itertools
+import image_geometry
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks            
@@ -34,7 +34,8 @@ class convert_to_topo_nav():
         self.camera_info = rospy.wait_for_message('/thorvald_002/kinect2_camera/hd/camera_info', CameraInfo)
         self.pub_weed_pointcloud = rospy.Publisher("/way_points/pointcloud", PointCloud, queue_size=1)
         self.wp_point_cloud = PointCloud()
-        self.weed_point_cloud.header.frame_id = 'map'
+        self.wp_point_cloud.header.frame_id = 'map'
+        self.camera_model = image_geometry.PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
         self.camera_height = 20.5
 
@@ -192,8 +193,9 @@ class convert_to_topo_nav():
 
         self.visualization_of_waypoints(wp_pose_list)
 
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            self.pub_weed_pointcloud.publish(self.weed_point_cloud)
+            self.pub_weed_pointcloud.publish(self.wp_point_cloud)
             rate.sleep()
 
         cv2.imshow("color_image", color_image)
@@ -210,9 +212,9 @@ class convert_to_topo_nav():
             wp.z = 0
             self.wp_point_cloud.points.append(wp)
 
-    def convert_to_world_pose(self, pose):
-        uv = self.camera_model.projectPixelTo3dRay(self.camera_model.rectifyPoint(pose))
-        way_point_world = [(uv[0] * self.camera_height), (uv[1] * self.camera_height)]
+    def convert_to_world_pose(self, pose_x, pose_y):
+        uv = self.camera_model.projectPixelTo3dRay(self.camera_model.rectifyPoint([pose_x, pose_y]))
+        way_point_world = [((uv[0] * self.camera_height) - 0.45), (uv[1] * self.camera_height)]
         return way_point_world
 
     def cluster_analysis(self, peaks, maxgap):
