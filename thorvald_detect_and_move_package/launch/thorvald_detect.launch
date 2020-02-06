@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+	<node name="ros_readimg" pkg="weed_detect_and_move_package" type="ros_readimg.py"/>
+	<node name="ros_getpoints" pkg="weed_detect_and_move_package" type="ros_getpoints.py"/>
+	
+</launch>

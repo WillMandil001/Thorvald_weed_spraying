@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(uol_cmp9767m_base)
+project(thorvald_sprayer_package)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,27 +8,9 @@ project(uol_cmp9767m_base)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  nav_msgs
   rospy
-  sensor_msgs
   std_msgs
-  
-  message_generation
-
-  thorvald_twist_mux
-  velodyne_description8
-  velodyne_gazebo_plugins8
-  kinect2_description
 )
-
-find_package (gazebo REQUIRED)
-
-
-if(CMAKE_HOST_UNIX)
-  catkin_add_env_hooks(90-uol_cmp9767m_base SHELLS sh DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env_hooks)
-else()
-  message(FATAL_ERROR "Only UNIX builds supported.")
-endif()
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -71,11 +53,11 @@ endif()
 # )
 
 ## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   y_axes_diff.srv
+# add_service_files(
+#   FILES
+#   Service1.srv
 #   Service2.srv
- )
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -85,11 +67,10 @@ endif()
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs
-#   nav_msgs#   sensor_msgs#   std_msgs
- )
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -120,13 +101,12 @@ endif()
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-
 catkin_package(
-  INCLUDE_DIRS ${GAZEBO_INCLUDE_DIRS}
-  LIBRARIES  ActorCollisionsPlugin
-  CATKIN_DEPENDS roscpp rospy #gazebo_plugins gazebo_ros
+#  INCLUDE_DIRS include
+#  LIBRARIES thorvald_sprayer_package
+#  CATKIN_DEPENDS rospy std_msgs
+#  DEPENDS system_lib
 )
-
 
 ###########
 ## Build ##
@@ -134,20 +114,14 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include)
-include_directories( ${catkin_INCLUDE_DIRS} 
-                     ${Boost_INCLUDE_DIR} 
-                     ${GAZEBO_INCLUDE_DIRS}
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
 )
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
-
-
-link_directories(${GAZEBO_LIBRARY_DIRS})
-add_library(ActorCollisionsPlugin src/ActorCollisionsPlugin.cc)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/uol_cmp9767m_base.cpp
+#   src/${PROJECT_NAME}/thorvald_sprayer_package.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -158,7 +132,7 @@ add_library(ActorCollisionsPlugin src/ActorCollisionsPlugin.cc)
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/uol_cmp9767m_base_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/thorvald_sprayer_package_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -181,11 +155,6 @@ add_library(ActorCollisionsPlugin src/ActorCollisionsPlugin.cc)
 
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-install(PROGRAMS
-  tests/simple_test.py
-  scripts/sprayer.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
@@ -194,12 +163,19 @@ install(PROGRAMS
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-## Mark executables and/or libraries for installation
-install(TARGETS ActorCollisionsPlugin
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+## Mark executables for installation
+## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
+# install(TARGETS ${PROJECT_NAME}_node
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark libraries for installation
+## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
+# install(TARGETS ${PROJECT_NAME}
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+# )
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
@@ -215,26 +191,15 @@ install(TARGETS ActorCollisionsPlugin
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
-foreach (dir tests config launch models urdf worlds maps rviz)
-    install(DIRECTORY ${dir}/
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
-endforeach(dir)
-
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_uol_cmp9767m_base.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_thorvald_sprayer_package.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-
-if(CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
-  add_rostest(tests/testme.test)
-endif()
