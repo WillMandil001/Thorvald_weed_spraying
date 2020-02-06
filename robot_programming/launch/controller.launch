@@ -1,3 +1,5 @@
+<?xml version="1.0"?>
+
 <launch> 
 	<!-- launch the throvald controller -->
 	<node pkg="robot_programming" name="topo_nav_planner" type="topo_nav_planner.py" output="screen"/>

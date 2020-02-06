@@ -1,3 +1,5 @@
+<?xml version="1.0"?>
+
 <launch> 
 	<!-- launch the machine vision weed segmentation node -->
 	<node pkg="robot_programming" name="vision_controller" type="vision_controller.py" output="screen"/>
