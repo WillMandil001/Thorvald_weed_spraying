@@ -10,20 +10,42 @@
   <arg name="gui" default="true" doc="run with visible gazebo"/>
   <arg name="obstacles" default="false" doc="run with human walking around"/>
   <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
+  
+  <!-- testing scenarios -->
+  <arg name="test1" default="false" doc="provide test world 1 as map(default: false)"/>
+  <arg name="test2" default="false" doc="provide test world 2 as map(default: false)"/>
+  <arg name="test3" default="false" doc="provide test world 3 as map(default: false)"/>
+  <arg name="test4" default="false" doc="provide test world 4 as map(default: false)"/>
 
   <!-- Launch the Gazebo world.  -->
-  <include file="$(find gazebo_ros)/launch/empty_world.launch" unless="$(arg obstacles)">
-    <arg name="use_sim_time" default="true"/>
-    <arg name="world_name" value="$(arg world_name)"/>
-    <arg name="gui" value="$(arg gui)" />
-  </include>
-
   <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg obstacles)">
     <arg name="use_sim_time" default="true"/>
     <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_actor.world"/>
     <arg name="gui" value="$(arg gui)" />
   </include>
+  <!-- launch testing scenario worlds -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg test1)">
+    <arg name="use_sim_time" default="true"/>
+    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_paper_1.world"/>
+    <arg name="gui" value="$(arg gui)" />
+  </include>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg test2)">
+    <arg name="use_sim_time" default="true"/>
+    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_paper_2.world"/>
+    <arg name="gui" value="$(arg gui)" />
+  </include>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg test3)">
+    <arg name="use_sim_time" default="true"/>
+    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_paper_3.world"/>
+    <arg name="gui" value="$(arg gui)" />
+  </include>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg test4)">
+    <arg name="use_sim_time" default="true"/>
+    <arg name="world_name" value="$(find uol_cmp9767m_base)/worlds/cmp9767m_paper_4.world"/>
+    <arg name="gui" value="$(arg gui)" />
+  </include>
 
+  <!-- Robot launch-->  
   <include file="$(find uol_cmp9767m_base)/launch/thorvald.launch">
     <arg name="robot_name" value="thorvald_001" />
     <!-- <arg name="x" value="5" /> -->
@@ -58,6 +80,4 @@
       type= "static_transform_publisher"
       args="0 0 0 0 0 0 /world /map 100" />
   </group>
-
-
 </launch>
