@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
-from scipy.signal import find_peaks            
+from scipy.signal import find_peaks
 from std_msgs.msg import String
 from sensor_msgs.msg import PointCloud
 from sensor_msgs.msg import Image, CameraInfo
@@ -66,7 +66,7 @@ class convert_to_topo_nav():
         imgx = (cv_image.shape[1] / 2)
         imgy = (cv_image.shape[0] / 2)
 
-        # 2. Calculate lines for each angle (0, 179) degrees and do for 
+        # 2. Calculate lines for each angle (0, 179) degrees and do for
         perpendicular_cumulative_section = []
         angles = []
         point = []
@@ -188,28 +188,32 @@ class convert_to_topo_nav():
                 if len(peaks) != 0:
                     for pk in mean_peak_list:
                         radius = 5
-                        # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3) 
+                        # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3)
                         wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
                         wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
         rows = self.classify(wp_pixel_list, 2.1*self.wp_interval)
-        for row in rows:
+        sorted_rows = self.order_rows(rows, angle_rad)
+
+
+        ''' Plotting the classification result:'''
+        for row in sorted_rows:
             colour = np.random.rand(3,) * 150
             for point in row:
                 color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
-        print rows
-        self.visualization_of_waypoints(wp_pose_list)
-
-        # rate = rospy.Rate(10)
-        # while not rospy.is_shutdown():
-        #     self.pub_weed_pointcloud.publish(self.wp_point_cloud)
-        #     rate.sleep()
-
         cv2.imshow("color_image", color_image)
         k = cv2.waitKey(0)
         if k == 27:
             pass
         cv2.destroyAllWindows()
+
+        ''' Publish the point cloud:'''
+        # rate = rospy.Rate(10)
+        # while not rospy.is_shutdown():
+        #     self.pub_weed_pointcloud.publish(self.wp_point_cloud)
+        #     rate.sleep()
+        '''More plotting '''
+        # self.visualization_of_waypoints(wp_pose_list)
 
     def euclidean_dist(self,a,b,x,y):
         xdiff = b - y
@@ -222,8 +226,8 @@ class convert_to_topo_nav():
         # OUPUT: Image pixels classified into lists for each crop row
         rows = [] # initialise an empty list of lists to store the single rows
         row_count = -1 # to keep track of the current class
-        next_to_check = [] # to keep track of which other points within the same class need to be examinred before moving on 
-        
+        next_to_check = [] # to keep track of which other points within the same class need to be examinred before moving on
+
         while len(waypoints) > 0:
             if len(next_to_check) == 0:
                 # Move on to a new starting point if the current thread is fully explored
@@ -245,6 +249,38 @@ class convert_to_topo_nav():
                     del waypoints[element]
             del(next_to_check[0])
         return rows
+
+    def order_rows(self, rows, angle):
+		# INPUT: A list of lists, where each single list contains waypoints of a seperate row
+		# INPUT: The general angle of the rows in radians
+		# OUPUT: returns the same waypoints, but in the correct order for navigating along the rows
+		order = []
+		row_count = 0
+		# rotate the data set by the vector of maximal variance (i.e. the angle)
+		# Dimensions reduced to x,y --> only y
+		V = np.zeros([2,1])
+		V[0] = np.cos(angle)
+		V[1] = np.sin(angle)
+
+		for row in rows:
+			order.append([])
+			points = []
+			for point in row:
+				wp_vector = np.reshape(np.array(point),[1,2])
+				rotated_vector = np.dot(wp_vector,V)
+				points.append(float(rotated_vector))
+			order[row_count] = np.argsort(points)
+			row_count += 1
+
+		sorted_rows = []
+		row_count = 0
+		for i,row in enumerate(rows):
+			sorted_rows.append([])
+			for j in range(len(row)):
+				index = order[i][j]
+				sorted_rows[row_count].append(row[index])
+			row_count += 1
+		return sorted_rows
 
     def visualization_of_waypoints(self, wp_list):
         for wp_xy in wp_list:
