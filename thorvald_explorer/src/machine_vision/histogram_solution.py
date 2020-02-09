@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import tf
+import pdb
+import csv
 import cv2
 import sys
 import copy
@@ -9,7 +11,6 @@ import tf2_ros
 import operator
 import itertools
 import image_geometry
-import pdb
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -196,6 +197,11 @@ class convert_to_topo_nav():
         rows = self.classify(wp_pixel_list, 2.1*self.wp_interval)
         sorted_rows = self.order_rows(rows, angle_rad)
         extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
+        extended_sorted_rows_world = self.convert_wplist_to_world(extended_sorted_rows)
+
+        with open("extended_sorted_rows.csv","w") as f:
+            wr = csv.writer(f)
+            wr.writerows(extended_sorted_rows_world)
 
 
         ''' Plotting the classification result:'''
@@ -205,17 +211,26 @@ class convert_to_topo_nav():
                 color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
         cv2.imshow("color_image", color_image)
         k = cv2.waitKey(0)
-        if k == 27:
-            pass
+        # if k == 27:
+        #     pass
         cv2.destroyAllWindows()
 
         ''' Publish the point cloud:'''
-        # rate = rospy.Rate(10)
-        # while not rospy.is_shutdown():
-        #     self.pub_weed_pointcloud.publish(self.wp_point_cloud)
-        #     rate.sleep()
-        '''More plotting '''
-        # self.visualization_of_waypoints(wp_pose_list)
+        self.visualization_of_waypoints(extended_sorted_rows_world)
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.pub_weed_pointcloud.publish(self.wp_point_cloud)
+            rate.sleep()
+
+    def convert_wplist_to_world(self, extended_sorted_rows):
+        wp_list = []
+        wp_list_list = []
+        for i in range(0, len(extended_sorted_rows)):
+            for j in extended_sorted_rows[i]:
+                wp_list.append(self.convert_to_world_pose(j[0], j[1]))
+            wp_list_list.append(wp_list)
+
+        return wp_list_list
 
     def extend_points(self, sorted_rows, angle_rad):
         # pdb.set_trace()
@@ -302,12 +317,22 @@ class convert_to_topo_nav():
 		return sorted_rows
 
     def visualization_of_waypoints(self, wp_list):
-        for wp_xy in wp_list:
-            wp = Point()
-            wp.x = wp_xy[0]
-            wp.y = wp_xy[1]
-            wp.z = 0
-            self.wp_point_cloud.points.append(wp)
+        if any(isinstance(el, list) for el in wp_list):
+            for i in wp_list:
+                for j in i:
+                    wp = Point()
+                    wp.x = j[0]
+                    wp.y = j[1]
+                    wp.z = 0
+                    self.wp_point_cloud.points.append(wp)
+        else:
+            for wp_xy in wp_list:
+                wp = Point()
+                wp.x = wp_xy[0]
+                wp.y = wp_xy[1]
+                wp.z = 0
+                self.wp_point_cloud.points.append(wp)
+
 
     def convert_to_world_pose(self, pose_x, pose_y):
         uv = self.camera_model.projectPixelTo3dRay(self.camera_model.rectifyPoint([pose_x, pose_y]))

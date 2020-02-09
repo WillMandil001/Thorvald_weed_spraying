@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import csv
 import rospy
 import actionlib
 from std_msgs.msg import String
@@ -7,14 +8,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 # Used to move the robot about the workspace without the TOPO-NAV
 # This code is no longer in use
 
-def movebase_client(way_point):
-    client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+def movebase_client(way_point, orientation):
+    client = actionlib.SimpleActionClient('thorvald_001/move_base', MoveBaseAction)
     client.wait_for_server()
-
-    pub = rospy.Publisher('/thorvald_001/current_state_id', String, queue_size=10)
-    goal_id = String()
-    goal_id.data = way_point[7]
-    pub.publish(goal_id)
 
     goal = MoveBaseGoal()  # publish a new goal based on the pre defined waypoints below
     print(goal)
@@ -22,11 +18,11 @@ def movebase_client(way_point):
     goal.target_pose.header.stamp = rospy.Time.now()
     goal.target_pose.pose.position.x = way_point[0]
     goal.target_pose.pose.position.y = way_point[1]
-    goal.target_pose.pose.position.z = way_point[2]
-    goal.target_pose.pose.orientation.x = way_point[3]
-    goal.target_pose.pose.orientation.y = way_point[4]
-    goal.target_pose.pose.orientation.z = way_point[5]
-    goal.target_pose.pose.orientation.w = way_point[6]
+    goal.target_pose.pose.position.z = 0
+    goal.target_pose.pose.orientation.x = orientation[0]
+    goal.target_pose.pose.orientation.y = orientation[1]
+    goal.target_pose.pose.orientation.z = orientation[2]
+    goal.target_pose.pose.orientation.w = orientation[3]
 
     client.send_goal(goal)
     wait = client.wait_for_result()
@@ -36,29 +32,36 @@ def movebase_client(way_point):
     else:
         return client.get_result()
 
+
 if __name__ == '__main__':
     rospy.init_node('thorvald_farm_path')
-    way_points = [[-5.2, -3.75, 0, 0, 0, 0, 1,],  # Start state.
-                  [6, -3.75, 0, 0, 0, 0, 1,],
 
-                  [6, -2.70, 0, 0, 0, 1, 0,],     # Next row 
-                  [-6.5, -2.70, 0, 0, 0, 1, 0,],
+    with open('extended_sorted_rows.csv', mode='r') as csv_file:
+        reader = csv.reader(csv_file)
+        # Print every value of every row. 
+        wp_list = []
+        for row in reader:
+            wp_row = []
+            for list_ in row:
+                wp = list_.split(",")
+                wp[0] = float(wp[0].replace('[', '').replace(']', '').replace(' ', ''))
+                wp[1] = float(wp[1].replace('[', '').replace(']', '').replace(' ', ''))
+                wp_row.append(wp)
+            wp_list.append(wp_row)
 
-                  [-6.5, -0.7, 0, 0, 0, 0, 1,],   # Next row  
-                  [6, -0.7, 0, 0, 0, 0, 1,],
+    # now move through the way points
+    # for row in wp_list:
+    #     for wp in row:
+    #         print wp
 
-                  [6, 0.24, 0, 0, 0, 1, 0,],   # Next row  
-                  [-6.5, 0.24, 0, 0, 0, 1, 0,],
-
-                  [-6.5, 2.2, 0, 0, 0, 0, 1,],   # Next row  
-                  [6, 2.2, 0, 0, 0, 0, 1,],
-
-                  [6, 3.2, 0, 0, 0, 1, 0,],   # Next row  
-                  [-6.5, 3.2, 0, 0, 0, 1, 0,],
-
-                  [-6.5, -3.75, 0, 0, 0, 0, 1,]]  # back
-
-    for i in way_points: 
-        result = movebase_client(i)
-        if result:
-            rospy.loginfo("Goal execution done!")
+    n = 2
+    for i in range(0,len(wp_list)):
+        orientation = [0,0,1,0]
+        if i % n == 1:
+            wp_list[i].reverse()
+            orientation = [0,0,0,1]
+        for waypoint in wp_list[i]:
+            print waypoint
+            result = movebase_client(waypoint, orientation)
+            if result:
+                rospy.loginfo("Goal execution done!")
