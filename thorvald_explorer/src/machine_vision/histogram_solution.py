@@ -38,6 +38,7 @@ class convert_to_topo_nav():
         self.camera_model.fromCameraInfo(self.camera_info)
         self.camera_height = 20.5
         self.wp_interval = 10
+        self.extension_d = 50
 
     def import_image(self):
         image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
@@ -194,10 +195,11 @@ class convert_to_topo_nav():
 
         rows = self.classify(wp_pixel_list, 2.1*self.wp_interval)
         sorted_rows = self.order_rows(rows, angle_rad)
+        extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
 
 
         ''' Plotting the classification result:'''
-        for row in sorted_rows:
+        for row in extended_sorted_rows:
             colour = np.random.rand(3,) * 150
             for point in row:
                 color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
@@ -214,6 +216,23 @@ class convert_to_topo_nav():
         #     rate.sleep()
         '''More plotting '''
         # self.visualization_of_waypoints(wp_pose_list)
+
+    def extend_points(self, sorted_rows, angle_rad):
+        # pdb.set_trace()
+        for i in range(0, len(sorted_rows)):
+            if len(sorted_rows[i]) > 10:
+                fx= sorted_rows[i][0][0] + (-self.extension_d * math.cos(angle_rad))
+                fy= sorted_rows[i][0][1] + (-self.extension_d * math.sin(angle_rad))
+                first_new_wp = [int(fx), int(fy)]
+                sorted_rows[i].insert(0, first_new_wp)
+                lx= sorted_rows[i][-1][0] + (self.extension_d * math.cos(angle_rad))
+                ly= sorted_rows[i][-1][1] + (self.extension_d * math.sin(angle_rad))
+                last_new_wp = [int(lx), int(ly)]
+                sorted_rows[i].append(last_new_wp)
+                print(first_new_wp, last_new_wp)
+
+        return sorted_rows
+
 
     def euclidean_dist(self,a,b,x,y):
         xdiff = b - y
