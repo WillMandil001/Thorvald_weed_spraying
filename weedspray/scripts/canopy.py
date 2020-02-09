@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 import os
+from sklearn.metrics import confusion_matrix
 
 
 class CanopyClass():
@@ -132,36 +133,46 @@ class CanopyClass():
         return mask
 
     def compare_masks(self, contours_image, manualmask_location):
-        percent = None
-        try:
-            manualmask_image = cv2.imread(manualmask_location)
-            manualmask_image = np.where(manualmask_image != 255, 0, manualmask_image)
-            manualmask_image = (255 - manualmask_image)
-            manualmask_image = np.mean(manualmask_image, axis=2)
-            manualmask_image = np.where(manualmask_image > 0, 255, manualmask_image)
+        # percent = None
+        manualmask_image = cv2.imread(manualmask_location)
+        manualmask_image = np.where(manualmask_image != 255, 0, manualmask_image)
+        manualmask_image = (255 - manualmask_image)
+        manualmask_image = np.mean(manualmask_image, axis=2)
+        manualmask_image = np.where(manualmask_image > 0, 255, manualmask_image)
 
-            compared_masks = (contours_image == manualmask_image)
-            percent = float(np.sum(compared_masks)) / float(compared_masks.size)
+        # import ipdb
+        # ipdb.set_trace()
 
-            # import ipdb
-            # ipdb.set_trace()
+        # print(manualmask_location)
+        # plt.subplot(2, 1, 1)
+        # plt.imshow(contours_image)
+        # plt.subplot(2, 1, 2)
+        # plt.imshow(manualmask_image)
+        # plt.show()
 
-            # plt.subplot(2, 1, 1)
-            # plt.imshow(contours_image)
-            # plt.subplot(2, 1, 2)
-            # plt.imshow(manualmask_image)
-            # plt.show()
-        except Exception as e:
-            # print(e)
-            return None
-        return percent
+        result = confusion_matrix(contours_image.ravel(), manualmask_image.ravel()).ravel()
+        if len(result) == 1:
+            tn, fp, fn, tp = result[0], 0, 0, 0
+        elif len(result) == 4:
+            tn, fp, fn, tp = result
+
+        return manualmask_image, tn, fp, fn, tp
 
 if __name__ == "__main__":
+    debug = False
+    showPlot = False
     dataset = '/home/bkbilly/Downloads/Paper_Dataset/'
-    plants = ['Basil', 'Lettuce', 'Anions']
-    planttypes = ['simple', 'realeasy', 'realhard']
+    plants = ['Anions', 'Lettuce', 'Basil']
+    planttypes = ['realhard', 'simple', 'realeasy']
     for num, plant_loc in enumerate(plants):
         plant_location = '{}{}'.format(dataset, plant_loc)
+
+        w_tn_sum, w_fp_sum, w_fn_sum, w_tp_sum = 0., 0., 0., 0.
+        w_sizesum = 0.
+        p_tn_sum, p_fp_sum, p_fn_sum, p_tp_sum = 0., 0., 0., 0.
+        p_sizesum = 0.
+
+        print('-----==== {} ====-----'.format(plant_loc))
         for pngimage in os.listdir('{}/Original'.format(plant_location)):
             inputimage = [
                 '{}/Original/{}'.format(plant_location, pngimage),
@@ -194,7 +205,7 @@ if __name__ == "__main__":
             weedmask_image = prefilter_image[indices[0], indices[1], :] = (0, 0, 255)
             weed_mask_contours = can.get_mask_from_contours(weed_contours, weed_mask)
             manualmask_location = '{}{}/Masks/Mask_Weed/{}'.format(dataset, plant_loc, pngimage)
-            weed_comparison = can.compare_masks(weed_mask_contours, manualmask_location)
+            w_manualmask_image, w_tn, w_fp, w_fn, w_tp = can.compare_masks(weed_mask_contours, manualmask_location)
 
             # Get contours of plants
             plant, plant_mask = can.filter_colors(ground_inv, inputimage[2])
@@ -203,7 +214,21 @@ if __name__ == "__main__":
             prefilter_image[indices[0], indices[1], :] = (0, 255, 0)
             plant_mask_contours = can.get_mask_from_contours(plant_contours, plant_mask)
             manualmask_location = '{}{}/Masks/Mask_Crop/{}'.format(dataset, plant_loc, pngimage)
-            plant_comparison = can.compare_masks(plant_mask_contours, manualmask_location)
+            p_manualmask_image, p_tn, p_fp, p_fn, p_tp = can.compare_masks(plant_mask_contours, manualmask_location)
+
+            w_tn_sum += w_tn
+            w_fp_sum += w_fp
+            w_fn_sum += w_fn
+            w_tp_sum += w_tp
+            w_sizesum += weed_mask_contours.size
+
+
+            p_tn_sum += p_tn
+            p_fp_sum += p_fp
+            p_fn_sum += p_fn
+            p_tp_sum += p_tp
+            p_sizesum += plant_mask_contours.size
+
 
             # Save the images (1 time thing)
             # save_location1 = '{}{}/ColourBased/{}'.format(dataset, plant_loc, pngimage)
@@ -213,14 +238,24 @@ if __name__ == "__main__":
             # cv2.imwrite(save_location1, prefilter_image)
             # cv2.imwrite(save_location2, plants_image)
 
-            print('{} ({}): {}, {}'.format(plant_loc, pngimage, weed_comparison, plant_comparison))
-            plt.subplot(2, 1, 1)
-            plt.imshow(cv_image)
-            plt.subplot(2, 1, 2)
-            plt.imshow(plants_image)
-            # plt.imshow(plant_mask_contours)
-            # plt.imshow(cv2.resize(contours_image, (0, 0), fx=0.5, fy=0.5))
-            plt.show()
+            if debug:
+                print('{}:'.format(pngimage))
+                print('  Weed:  tn={}, fp={} fn={} tp={}'.format(w_tn, w_fp, w_fn, w_tp))
+                print('  Plant: tn={}, fp={} fn={} tp={}'.format(p_tn, p_fp, p_fn, p_tp))
+            if showPlot:
+                plt.subplot(3, 2, 1)
+                plt.imshow(cv_image)
+                plt.subplot(3, 2, 2)
+                plt.imshow(plants_image)
+                plt.subplot(3, 2, 3)
+                plt.imshow(weed_mask_contours)
+                plt.subplot(3, 2, 4)
+                plt.imshow(w_manualmask_image)
+                plt.subplot(3, 2, 5)
+                plt.imshow(plant_mask_contours)
+                plt.subplot(3, 2, 6)
+                plt.imshow(p_manualmask_image)
+                plt.show()
 
             # cv2.imshow('Mask', ground_mask + plant_mask)
             # cv2.imshow('Mask_plant', mask_plant)
@@ -229,3 +264,20 @@ if __name__ == "__main__":
             # cv2.imshow('Contours', plant_mask_contours)
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
+
+        print('---------====== Total ======-------------')
+        print('{}:'.format(plant_loc))
+        print('  Weed:  tn={} fp={} fn={} tp={} size={}'.format(
+            round(w_tn_sum / p_sizesum, 3),
+            round(w_fp_sum / p_sizesum, 3),
+            round(w_fn_sum / p_sizesum, 3),
+            round(w_tp_sum / p_sizesum, 3),
+            w_sizesum
+        ))
+        print('  Plant: tn={} fp={} fn={} tp={} size={}'.format(
+            round(p_tn_sum / p_sizesum, 3),
+            round(p_fp_sum / p_sizesum, 3),
+            round(p_fn_sum / p_sizesum, 3),
+            round(p_tp_sum / p_sizesum, 3),
+            p_sizesum
+        ))
