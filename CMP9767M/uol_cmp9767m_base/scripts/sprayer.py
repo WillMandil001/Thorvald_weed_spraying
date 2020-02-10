@@ -40,7 +40,7 @@ BOX_SDF="""
           </cylinder>
         </geometry>
         <material>
-            <emissive>1 0 0 1</emissive>
+            <ambient>1 0 0 1</ambient>
         </material>
       </visual>
     </link>

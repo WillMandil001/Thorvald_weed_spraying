@@ -24,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: All Weed Points
 Toolbars:
   toolButtonStyle: 2
 Visualization Manager:
@@ -396,7 +396,7 @@ Visualization Manager:
       Size (Pixels): 8
       Size (m): 0.00999999978
       Style: Points
-      Topic: /weed/sprayed_points/thorvald_001
+      Topic: /thorvald_002/weed/sprayed_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true

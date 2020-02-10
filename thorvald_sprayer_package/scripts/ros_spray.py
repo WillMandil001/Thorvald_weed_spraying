@@ -6,7 +6,7 @@ import tf
 # Ros Messages
 from sensor_msgs.msg import PointCloud
 from uol_cmp9767m_base.srv import y_axes_diff, y_axes_diffRequest
-from geometry_msgs.msg import Point32
+from geometry_msgs.msg import Point32, PointStamped
 
 
 class Sprayer():
@@ -87,8 +87,13 @@ class Sprayer():
 
                 if dx < 0.04: # Same as killbox radius
                     if point not in self.sprayed:
-
                         # TODO fix mirroring
+                        new_point=PointStamped()
+                        new_point.header.frame_id = "map"
+                        new_point.header.stamp =rospy.Time()
+                        new_point.point.x=point.x
+                        new_point.point.y=point.y
+                        p=self.tflistener.transformPoint("{}/sprayer".format(self.robot),new_point)
                         # TODO if spray radius hits many points add them to the real_sprayed points
 
                     	# add point in sprayed array
@@ -96,17 +101,20 @@ class Sprayer():
 
                         # save the position of the sprayer (visualise in rviz)
                         real_point = Point32(
-                            x_sprayer, current_y_sprayer, point.z)
+                            x_sprayer, new_point.point.y, point.z)
                         self.real_sprayed.append(real_point)
 
                         # Initialise request and assign to it the difference in y axis
                         # between the sprayer and the weed
                         req = y_axes_diffRequest()
-                        req.y_diff = dy
+                        
+                        #trans[1] should be the current_y_sprayer
+                        req.y_diff = trans[1]-new_point.point.y
+                        print(trans[1])
 
                         # Call service to spray
                         self.spray_srv(req)
-                        print('I sprayied!!!', dy)
+                        # print('I sprayied!!!', dy)
 
             # Publish the Sprayed Points
             self.sprayed_points_msg.points = self.real_sprayed
