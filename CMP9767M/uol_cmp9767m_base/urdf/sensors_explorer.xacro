@@ -21,7 +21,7 @@
 
     <inertial>
       <mass value="1" />
-      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />      
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
     </inertial>
   </link>
   <gazebo reference="$(arg tf_prefix)/sprayer">
@@ -122,7 +122,7 @@
   <xacro:property name="velodyne_gpu" value="false"/>
 
   <joint name="$(arg robot_name)_${velodyne_name}_base_mount_joint" type="fixed">
-    <xacro:insert_block name="velodyne_origin" /> 
+    <xacro:insert_block name="velodyne_origin" />
     <parent link="$(arg tf_prefix)/${velodyne_parent}"/>
     <child link="$(arg tf_prefix)/${velodyne_name}_link"/>
   </joint>
@@ -261,8 +261,8 @@
   <!-- Kinect v2 -->
   <xacro:property name="kinect2_parent" value="base_link" />
   <xacro:property name="kinect2_name" value="kinect2" />
-  <xacro:property name="kinect2_cam_px" value="0.45" />
-  <xacro:property name="kinect2_cam_py" value="0.0" />
+  <xacro:property name="kinect2_cam_px" value="10.0" />
+  <xacro:property name="kinect2_cam_py" value="10.0" />
   <xacro:property name="kinect2_cam_pz" value="20.5" />
   <xacro:property name="kinect2_cam_or" value="0.0" />
   <xacro:property name="kinect2_cam_op" value="${M_PI/2}" />
@@ -402,4 +402,3 @@
   </gazebo>
 
 </robot>
-
