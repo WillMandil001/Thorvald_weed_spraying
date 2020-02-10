@@ -10,7 +10,7 @@
   <arg name="gui" default="true" doc="run with visible gazebo"/>
   <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
   <!--  nothing arg is only to run simulation with 3 crop lines-->
-  <arg name="nothing" default="true" />
+  <arg name="nothing" default="false" />
 
   
   <!-- testing scenarios -->

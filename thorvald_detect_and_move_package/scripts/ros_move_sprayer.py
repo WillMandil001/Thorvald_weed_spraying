@@ -60,30 +60,19 @@ class MoveRobot():
 
 def main(args):
     '''Initializes and cleanup ros node'''
-    rospy.init_node('move_robot', anonymous=True)
+    rospy.init_node('move_robot_spray', anonymous=True)
     mv_robot = MoveRobot('thorvald_002')
     # MoveRobot('thorvald_002')
 
     mv_robot.changerow('simple_inv')
-    mv_robot.movebase_client(-6, -3, 90)
-    mv_robot.movebase_client(6, -3, 90)
-    mv_robot.movebase_client(6, -2, 0)
-    mv_robot.movebase_client(-6, -2, 0)
+    mv_robot.movebase_client(-8, 4, 90)
+    mv_robot.movebase_client(-6, 0, 90)
+    mv_robot.movebase_client(6, 0, 90)
+    mv_robot.movebase_client(6, -1.25, 0)
+    mv_robot.movebase_client(-6, -1.25, 0)
+    mv_robot.movebase_client(-8, 4, 90)
     mv_robot.changerow('')
 
-    mv_robot.changerow('realeasy_inv')
-    mv_robot.movebase_client(6, -0.7, 90)
-    mv_robot.movebase_client(-6, -0.7, 90)
-    mv_robot.movebase_client(-6, 0.2, 0)
-    mv_robot.movebase_client(6, 0.2, 0)
-    mv_robot.changerow('')
-
-    mv_robot.changerow('realhard_inv')
-    mv_robot.movebase_client(6, 2.2, 90)
-    mv_robot.movebase_client(-6, 2.2, 90)
-    mv_robot.movebase_client(-6, 3.2, 0)
-    mv_robot.movebase_client(6, 3.2, 0)
-    mv_robot.changerow('')
 
     try:
         rospy.spin()

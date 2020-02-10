@@ -20,7 +20,7 @@
 	
 	
 	<!-- move_base -->
-	<node name="move_base" pkg="move_base" type="move_base" output="screen">
+	<node name="move_base_detector" pkg="move_base" type="move_base" output="screen">
         <remap from="odom" to="$(arg robot_name)/odometry/base_raw" />
         <remap from="cmd_vel" to="$(arg robot_name)/nav_vel" />
 

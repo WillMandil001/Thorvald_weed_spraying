@@ -27,7 +27,7 @@ class Sprayer():
         #     self.spray_weed_callback)
 
         self.sub = rospy.Subscriber(
-            "/weed/allpoints/{}".format(self.robot),
+            "/weed/allpoints/thorvald_001",
             PointCloud,
             self.spray_weed_callback)
 

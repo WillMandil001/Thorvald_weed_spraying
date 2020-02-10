@@ -65,25 +65,15 @@ def main(args):
     # MoveRobot('thorvald_002')
 
     mv_robot.changerow('simple_inv')
-    mv_robot.movebase_client(-6, -3, 90)
-    mv_robot.movebase_client(6, -3, 90)
-    mv_robot.movebase_client(6, -2, 0)
-    mv_robot.movebase_client(-6, -2, 0)
+    mv_robot.movebase_client(-8, -4, 90)
+    mv_robot.movebase_client(-6, 0, 90)
+    mv_robot.movebase_client(6, 0, 90)
+    mv_robot.movebase_client(6, -1.25, 0)
+    mv_robot.movebase_client(-6, -1.25, 0)
+    mv_robot.movebase_client(-8, -4, 90)
     mv_robot.changerow('')
 
-    mv_robot.changerow('realeasy_inv')
-    mv_robot.movebase_client(6, -0.7, 90)
-    mv_robot.movebase_client(-6, -0.7, 90)
-    mv_robot.movebase_client(-6, 0.2, 0)
-    mv_robot.movebase_client(6, 0.2, 0)
-    mv_robot.changerow('')
 
-    mv_robot.changerow('realhard_inv')
-    mv_robot.movebase_client(6, 2.2, 90)
-    mv_robot.movebase_client(-6, 2.2, 90)
-    mv_robot.movebase_client(-6, 3.2, 0)
-    mv_robot.movebase_client(6, 3.2, 0)
-    mv_robot.changerow('')
 
     try:
         rospy.spin()

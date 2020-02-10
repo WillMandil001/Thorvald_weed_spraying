@@ -53,7 +53,7 @@ class Sprayer:
     def __init__(self):
         self.sdf = BOX_SDF
         #define the services
-        self.srv = rospy.Service('/thorvald_001/dynamic_sprayer', y_axes_diff, self.spray)
+        self.srv = rospy.Service('/thorvald_002/dynamic_sprayer', y_axes_diff, self.spray)
         #call the service to spawn a little rectangle on gazebo
         self.spawner = rospy.ServiceProxy(
             '/gazebo/spawn_sdf_model', SpawnModel)
@@ -62,7 +62,7 @@ class Sprayer:
         request = SpawnModelRequest()
         request.model_name = 'killbox_%s' % uuid4()
         request.model_xml = self.sdf
-        request.reference_frame = 'thorvald_001/base_link'
+        request.reference_frame = 'thorvald_002/base_link'
         request.initial_pose.position.z = 0.005
         request.initial_pose.position.x = -0.45
         request.initial_pose.orientation.w = 1.0
