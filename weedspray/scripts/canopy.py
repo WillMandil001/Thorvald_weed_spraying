@@ -128,7 +128,7 @@ class CanopyClass():
 
     def get_mask_from_contours(self, contours, old_mask):
         mask = np.copy(old_mask)
-        mask = np.where(mask == 255, 0, mask)
+        mask = np.where(mask != 0, 0, mask)
         cv2.drawContours(mask, contours, -1, 255, -1)
         return mask
 
@@ -162,8 +162,8 @@ if __name__ == "__main__":
     debug = False
     showPlot = False
     dataset = '/home/bkbilly/Downloads/Paper_Dataset/'
-    plants = ['Anions', 'Lettuce', 'Basil']
-    planttypes = ['realhard', 'simple', 'realeasy']
+    plants = ['Basil', 'Anions', 'Lettuce']
+    planttypes = ['simple', 'realhard', 'realeasy']
     for num, plant_loc in enumerate(plants):
         plant_location = '{}{}'.format(dataset, plant_loc)
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
             weed, weed_mask = can.filter_colors(ground_inv, inputimage[1])
             contours_image, weed_contours, contours_boxes, contours_points = can.get_contours(weed, cv_image)
             indices = np.where(weed_mask == 255)
-            weedmask_image = prefilter_image[indices[0], indices[1], :] = (0, 0, 255)
+            prefilter_image[indices[0], indices[1], :] = (0, 0, 255)
             weed_mask_contours = can.get_mask_from_contours(weed_contours, weed_mask)
             manualmask_location = '{}{}/Masks/Mask_Weed/{}'.format(dataset, plant_loc, pngimage)
             w_manualmask_image, w_tn, w_fp, w_fn, w_tp = can.compare_masks(weed_mask_contours, manualmask_location)
@@ -267,17 +267,17 @@ if __name__ == "__main__":
 
         print('---------====== Total ======-------------')
         print('{}:'.format(plant_loc))
-        print('  Weed:  tn={} fp={} fn={} tp={} size={}'.format(
-            round(w_tn_sum / p_sizesum, 3),
-            round(w_fp_sum / p_sizesum, 3),
-            round(w_fn_sum / p_sizesum, 3),
-            round(w_tp_sum / p_sizesum, 3),
-            w_sizesum
-        ))
-        print('  Plant: tn={} fp={} fn={} tp={} size={}'.format(
-            round(p_tn_sum / p_sizesum, 3),
-            round(p_fp_sum / p_sizesum, 3),
-            round(p_fn_sum / p_sizesum, 3),
-            round(p_tp_sum / p_sizesum, 3),
+        print('  Plant:\t tp={}\t fp={}\t fn={}\t tn={}\t size={}'.format(
+            round(p_tp_sum / p_sizesum * 100, 1),
+            round(p_fp_sum / p_sizesum * 100, 1),
+            round(p_fn_sum / p_sizesum * 100, 1),
+            round(p_tn_sum / p_sizesum * 100, 1),
             p_sizesum
+        ))
+        print('  Weed: \t tp={}\t fp={}\t fn={}\t tn={}\t size={}'.format(
+            round(w_tp_sum / p_sizesum * 100, 1),
+            round(w_fp_sum / p_sizesum * 100, 1),
+            round(w_fn_sum / p_sizesum * 100, 1),
+            round(w_tn_sum / p_sizesum * 100, 1),
+            w_sizesum
         ))
