@@ -61,7 +61,7 @@ if __name__ == '__main__':
             wp_list[i].reverse()
             orientation = [0,0,0,1]
         for waypoint in wp_list[i]:
-            print waypoint
+            print(waypoint)
             result = movebase_client(waypoint, orientation)
             if result:
                 rospy.loginfo("Goal execution done!")

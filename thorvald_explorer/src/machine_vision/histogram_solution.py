@@ -127,7 +127,7 @@ class convert_to_topo_nav():
 			mean_list.append(mean)
 
 		index, value = max(enumerate(mean_list), key=operator.itemgetter(1))
-		print index
+		print(index)
 		# plt.plot(perpendicular_cumulative_section[index])
 		# plt.ylabel(('angle: ' + str(index)))
 		# plt.ylim([0, 700])
@@ -220,18 +220,18 @@ class convert_to_topo_nav():
 		cv2.destroyAllWindows()
 
 		''' Publish the point cloud:'''
-		self.visualization_of_waypoints(extended_sorted_rows_world)
-		rate = rospy.Rate(10)
-		while not rospy.is_shutdown():
-			self.pub_weed_pointcloud.publish(self.wp_point_cloud)
-			rate.sleep()
+		# self.visualization_of_waypoints(extended_sorted_rows_world)
+		# rate = rospy.Rate(10)
+		# while not rospy.is_shutdown():
+		# 	self.pub_weed_pointcloud.publish(self.wp_point_cloud)
+		# 	rate.sleep()
 
 	def convert_wplist_to_world(self, extended_sorted_rows):
-		wp_list = []
 		wp_list_list = []
-		for i in range(0, len(extended_sorted_rows)):
-			for j in extended_sorted_rows[i]:
-				wp_list.append(self.convert_to_world_pose(j[0], j[1]))
+		for row in extended_sorted_rows:
+			wp_list = []
+			for wp in row:
+				wp_list.append(self.convert_to_world_pose(wp[0], wp[1]))
 			wp_list_list.append(wp_list)
 
 		return wp_list_list

@@ -2,7 +2,7 @@
 <launch>
   <arg name="db_path" default="$(optenv HOME)/mongodb" />
   <!-- <arg name="tmap" default="test" /> -->
-  <arg name="tmap" default="farm_trial_map" />
+  <arg name="tmap" default="test" />
   <arg name="robot_name" default="thorvald_001" />
   <arg name="pointset" default="$(arg tmap)" />
   <arg name="mon_nav_config_file"  default="" />
