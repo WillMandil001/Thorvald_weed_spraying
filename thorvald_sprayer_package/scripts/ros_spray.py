@@ -76,9 +76,8 @@ class Sprayer():
 
                 # this creates mirror effect
                 dy = current_y_sprayer - point.y
-
                 # When sprayer moves, sleep for travel time
-                self.slep(dy)
+                # self.slep(dy)
 
                 if dx < self.radius:  # Same as killbox radius
                     if point not in self.sprayed:
@@ -110,7 +109,6 @@ class Sprayer():
 
                         # Call service to spray
                         self.spray_srv(req)
-
                         # save the position of the sprayer (visualise in rviz)
                         real_point = Point32(
                             x_sprayer, rviz_p.point.y, point.z)
@@ -125,6 +123,9 @@ class Sprayer():
                             if dist <= self.radius:
                                 # add point in sprayed array
                                 self.sprayed.append(point2)
+
+                        print(current_y_sprayer ,point.y, dy)
+                        self.y_previous = point.y
 
             # Publish the Sprayed Points in RVIZ
             self.sprayed_points_msg.points = self.real_sprayed
