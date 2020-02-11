@@ -22,7 +22,6 @@ from sensor_msgs.msg import PointCloud
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PoseStamped, PoseArray, Point,Point32
 from visualization_msgs.msg import MarkerArray, Marker
-
 import pickle
 
 class convert_to_topo_nav():
@@ -40,7 +39,8 @@ class convert_to_topo_nav():
 		self.camera_model.fromCameraInfo(self.camera_info)
 		self.camera_height = 20.5
 		self.wp_interval = 10
-		self.extension_d = 50
+		self.extension_d = 120
+		self.cluster_distance_scalar = 2.5
 
 	def import_image(self):
 		image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
@@ -195,7 +195,7 @@ class convert_to_topo_nav():
 						wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
 						wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
-		rows = self.classify(wp_pixel_list, 2.1*self.wp_interval)
+		rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
 		sorted_rows = self.order_rows(rows, angle_rad)
 		extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
 		extended_sorted_rows_world = self.convert_wplist_to_world(extended_sorted_rows)
