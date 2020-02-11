@@ -14,8 +14,10 @@ class Sprayer():
     def __init__(self, robot):
         self.robot = robot
         self.sprayed = []  # Keep a list of sprayed points for rviz
-        self.real_sprayed = [] #
+        self.real_sprayed = []
         self.last_spray_pos = 0
+        self.y_previous = 0
+        self.radius = 0.04  # killbox radius
 
         self.spray_srv = rospy.ServiceProxy(
             "{}/dynamic_sprayer".format(self.robot),
@@ -58,65 +60,73 @@ class Sprayer():
 
         # First initialise current_y_sprayer = result from tf
         # it's going to be updated according to the place it travels to.
-        current_y_sprayer = trans[1]
 
         # Iterate every detected Weed
         for point in data.points:
-            # pos of robot
-            x_sprayer = trans[0]
-
-            # Difference in 'x' and 'y' frame
-            dx = abs(x_sprayer - point.x)
-            dy = current_y_sprayer - point.y  # this creates mirror effect
 
             # If you see any weeds in current crop line
             # (crop line has a width of 1 meter thats why <0.5)
             if abs(trans[1] - point.y) < 0.5:
-            	# TODO smart spray
+                # pos of robot
+                x_sprayer = trans[0]
+                current_y_sprayer = trans[1] + self.y_previous
 
-                # find difference distance between point and current sprayer position
-                # sprayer_dist = current_y_sprayer - point.y
-                # print("I found weed with distance, ",
-                #       current_y_sprayer, point.y, sprayer_dist)
-                
+                # Difference in 'x' and 'y' frame
+                dx = abs(x_sprayer - point.x)
+
+                # this creates mirror effect
+                dy = current_y_sprayer - point.y
+
                 # When sprayer moves, sleep for travel time
-                #self.slep(sprayer_dist)
+                self.slep(dy)
 
-                # After moving (sleeping) update the current sprayer position to it's new position
-                current_y_sprayer = point.y
-
-                if dx < 0.04: # Same as killbox radius
+                if dx < self.radius:  # Same as killbox radius
                     if point not in self.sprayed:
-                        # TODO fix mirroring
-                        new_point=PointStamped()
+
+                        new_point = PointStamped()
                         new_point.header.frame_id = "map"
-                        new_point.header.stamp =rospy.Time()
-                        new_point.point.x=point.x
-                        new_point.point.y=point.y
-                        p=self.tflistener.transformPoint("{}/sprayer".format(self.robot),new_point)
-                        # TODO if spray radius hits many points add them to the real_sprayed points
-
-                    	# add point in sprayed array
-                        self.sprayed.append(point)
-
-                        # save the position of the sprayer (visualise in rviz)
-                        real_point = Point32(
-                            x_sprayer, new_point.point.y, point.z)
-                        self.real_sprayed.append(real_point)
+                        new_point.header.stamp = rospy.Time()
+                        new_point.point.x = point.x
+                        new_point.point.y = point.y
+                        p = self.tflistener.transformPoint(
+                            "{}/sprayer".format(self.robot), new_point)
 
                         # Initialise request and assign to it the difference in y axis
                         # between the sprayer and the weed
                         req = y_axes_diffRequest()
-                        
-                        #trans[1] should be the current_y_sprayer
-                        req.y_diff = trans[1]-new_point.point.y
-                        print(trans[1])
+
+                        # req has to be the difference from center of sprayer
+                        # and weed detected IN REFERENCE TO THE SPRAYER!
+                        req.y_diff = p.point.y
+
+                        new_point2 = PointStamped()
+                        new_point2.header.frame_id = "{}/sprayer".format(
+                            self.robot)
+                        new_point2.header.stamp = rospy.Time()
+                        new_point2.point.x = p.point.x
+                        new_point2.point.y = p.point.y
+                        rviz_p = self.tflistener.transformPoint(
+                            "map", new_point2)
 
                         # Call service to spray
                         self.spray_srv(req)
-                        # print('I sprayied!!!', dy)
 
-            # Publish the Sprayed Points
+                        # save the position of the sprayer (visualise in rviz)
+                        real_point = Point32(
+                            x_sprayer, rviz_p.point.y, point.z)
+
+                        # Save point for visualisation
+                        self.real_sprayed.append(real_point)
+
+                        # If dist of weed < radius of killbox then save as sprayed
+                        for point2 in data.points:
+                            dist = math.sqrt(math.pow(
+                                point2.x - rviz_p.point.x, 2) + math.pow(point2.y - rviz_p.point.y, 2))
+                            if dist <= self.radius:
+                                # add point in sprayed array
+                                self.sprayed.append(point2)
+
+            # Publish the Sprayed Points in RVIZ
             self.sprayed_points_msg.points = self.real_sprayed
             self.sprayed_points_msg.header.frame_id = 'map'
             self.sprayed_points_msg.header.stamp = time
