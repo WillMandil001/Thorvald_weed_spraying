@@ -23,6 +23,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PoseStamped, PoseArray, Point,Point32
 from visualization_msgs.msg import MarkerArray, Marker
 
+import pickle
 
 class convert_to_topo_nav():
 	def __init__(self):
@@ -203,6 +204,9 @@ class convert_to_topo_nav():
 			wr = csv.writer(f)
 			wr.writerows(extended_sorted_rows_world)
 
+		''' Exort waypoint pixel locations for evaluation'''
+		# with open('toponav.waypoints', 'wb') as wp_file:
+		# 	pickle.dump(extended_sorted_rows, wp_file)
 
 		''' Plotting the classification result:'''
 		for row in extended_sorted_rows:
@@ -327,8 +331,6 @@ class convert_to_topo_nav():
 		row_order = np.argsort(mean_height)
 		for num in row_order:
 			double_sorted.append(sorted_rows[num])
-
-		import pdb;pdb.set_trace()
 		return double_sorted
 
 	def visualization_of_waypoints(self, wp_list):
