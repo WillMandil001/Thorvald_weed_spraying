@@ -1,0 +1,60 @@
+- meta:
+    map: EMPTY
+    node: EMPTY
+    pointset: EMPTY
+  node:
+    edges:
+    - action: move_base
+      edge_id: EMPTY
+      inflation_radius: 0.0
+      map_2d: cropped
+      node: EMPTY
+      recovery_behaviours_config: ''
+      top_vel: 0.55
+    - action: move_base
+      edge_id: EMPTY
+      inflation_radius: 0.0
+      map_2d: cropped
+      node: EMPTY
+      recovery_behaviours_config: ''
+      top_vel: 0.55
+    - action: move_base
+      edge_id: EMPTY
+      inflation_radius: 0.0
+      map_2d: cropped
+      node: EMPTY
+      recovery_behaviours_config: ''
+      top_vel: 0.55
+    localise_by_topic: ''
+    map: EMPTY
+    name: EMPTY
+    pointset: EMPTY
+    pose:
+      orientation:
+        w: 1.0
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    verts:
+    - x: 0.689999997616
+      y: 0.287000000477
+    - x: 0.287000000477
+      y: 0.689999997616
+    - x: -0.287000000477
+      y: 0.689999997616
+    - x: -0.689999997616
+      y: 0.287000000477
+    - x: -0.689999997616
+      y: -0.287000000477
+    - x: -0.287000000477
+      y: -0.689999997616
+    - x: 0.287000000477
+      y: -0.689999997616
+    - x: 0.689999997616
+      y: -0.287000000477
+    xy_goal_tolerance: 0.3
+    yaw_goal_tolerance: 1.0
