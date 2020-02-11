@@ -78,6 +78,7 @@ class Sprayer():
                 dy = current_y_sprayer - point.y
                 # When sprayer moves, sleep for travel time
                 # self.slep(dy)
+                self.slep(4)
 
                 if dx < self.radius:  # Same as killbox radius
                     if point not in self.sprayed:
@@ -123,6 +124,7 @@ class Sprayer():
                             if dist <= self.radius:
                                 # add point in sprayed array
                                 self.sprayed.append(point2)
+                                # TODO counter of points sprayed and detected points
 
                         print(current_y_sprayer ,point.y, dy)
                         self.y_previous = point.y

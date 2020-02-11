@@ -130,7 +130,7 @@ class image_projection():
                 dx = abs(point.x - keep.x)
                 dy = abs(point.y - keep.y)
                 dist = math.hypot(dx, dy)
-                if dist < 0.07:
+                if dist < 0.04:
                     found_close = True
 
             # Not found on our list, append it

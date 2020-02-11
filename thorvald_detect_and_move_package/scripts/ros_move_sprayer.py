@@ -65,7 +65,6 @@ def main(args):
     # MoveRobot('thorvald_002')
 
     mv_robot.changerow('simple_inv')
-    mv_robot.movebase_client(-8, 4, 90)
     mv_robot.movebase_client(-6, 0, 90)
     mv_robot.movebase_client(6, 0, 90)
     mv_robot.movebase_client(6, -1.25, 0)
