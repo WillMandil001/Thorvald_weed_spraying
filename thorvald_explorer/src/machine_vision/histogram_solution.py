@@ -38,14 +38,16 @@ class convert_to_topo_nav():
 		self.camera_model = image_geometry.PinholeCameraModel()
 		self.camera_model.fromCameraInfo(self.camera_info)
 		self.camera_height = 20.5
-		self.wp_interval = 10
+		self.wp_interval = 3
 		self.extension_d = 120
 		self.cluster_distance_scalar = 2.5
+		self.max_deviation = 4 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
 
 	def import_image(self):
-		image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
-		self.last_ts = image.header.stamp
-		cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
+		#image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
+		#self.last_ts = image.header.stamp
+		#cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
+		cv_image = cv2.imread('world4.png')
 		return cv_image
 
 	def remove_soil(self, cv_image):  # ran once to segment the weeds and locate them
@@ -198,6 +200,8 @@ class convert_to_topo_nav():
 		rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
 		sorted_rows = self.order_rows(rows, angle_rad)
 		extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
+		sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
+
 		extended_sorted_rows_world = self.convert_wplist_to_world(extended_sorted_rows)
 
 		with open("extended_sorted_rows.csv","w") as f:
@@ -209,7 +213,7 @@ class convert_to_topo_nav():
 		# 	pickle.dump(extended_sorted_rows, wp_file)
 
 		''' Plotting the classification result:'''
-		for row in extended_sorted_rows:
+		for row in sparse_waypoints:
 			colour = np.random.rand(3,) * 150
 			for point in row:
 				color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
@@ -251,7 +255,6 @@ class convert_to_topo_nav():
 				print(first_new_wp, last_new_wp)
 
 		return sorted_rows
-
 
 	def euclidean_dist(self,a,b,x,y):
 		xdiff = b - y
@@ -332,6 +335,68 @@ class convert_to_topo_nav():
 		for num in row_order:
 			double_sorted.append(sorted_rows[num])
 		return double_sorted
+
+	def drop_redundant_wp(self, wp):
+		sparse_wp = []
+		row_count = -1
+		for row in wp:
+			row_count += 1
+			sparse_wp.append([])
+			anchor_point = []
+			for point in row:
+				if not anchor_point:
+					previous_angle = []
+					anchor_point = tuple(point)
+					sparse_wp[row_count].append(point)
+				else:
+					dx = point[0]-anchor_point[0]
+					dy = point[1]-anchor_point[1]
+					angle = math.atan2(dy, dx)
+					if angle < 0:
+						sign = -1
+					else:
+						sign = 1
+					angle = abs(angle)
+					while angle > (math.pi/2):
+						angle -= (math.pi/2)
+
+					if not previous_angle:
+						# Previous angle is always from the current anchor point
+						# to the immediate next point
+						previous_angle = sign * angle
+						point = tuple(point)
+					else:
+						length = math.sqrt(dx**2 + dy**2)
+						delta_angle = (sign * angle) - previous_angle
+						deviation = np.sin(delta_angle) * length
+
+						if abs(deviation) > self.max_deviation:
+						#elif abs((sign * angle) - previous_angle) > self.max_angle:
+							sparse_wp[row_count].append(prev_point)
+							# Update the new anchor point
+							anchor_point = tuple(prev_point)
+							prev_point = tuple(point)
+
+							# Update the "previous angle" to the angle between the
+							# new anchor point and the immediately following point
+							dx = point[0]-anchor_point[0]
+							dy = point[1]-anchor_point[1]
+							angle = math.atan2(dy, dx)
+							if angle < 0:
+								sign = -1
+							else:
+								sign = 1
+							angle = abs(angle)
+							while angle > (math.pi/2):
+								angle -= (math.pi/2)
+							previous_angle = sign * angle
+						prev_point = tuple(point)
+			sparse_wp[row_count].append(point)
+		return sparse_wp
+
+
+
+
 
 	def visualization_of_waypoints(self, wp_list):
 		if any(isinstance(el, list) for el in wp_list):
