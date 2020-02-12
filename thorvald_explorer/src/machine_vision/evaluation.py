@@ -23,7 +23,7 @@ class evaluation():
         self.camera_FoV = 26 # in pixels
         self.wheel_centre_distance = 30
         self.wheel_width = 9
-        img = cv2.imread('Evaluation/1_annotated.png', 0) # annotated image
+        img = cv2.imread('Evaluation/world4_annotated.png', 0) # annotated image
         ret,self.annotated_img = cv2.threshold(img,50,1,cv2.THRESH_BINARY)
 
         with open('Evaluation/toponav.waypoints', 'rb') as wp_file:
@@ -31,7 +31,7 @@ class evaluation():
 
     def evaluate_camera(self):
         vis = cv2.imread('world4.png')
-        comp = cv2.imread('Evaluation/1_annotated.png')
+        comp = cv2.imread('Evaluation/world4_annotated.png')
         path_img = copy.deepcopy(self.annotated_img)
         ret,path_img = cv2.threshold(path_img,255,1,cv2.THRESH_BINARY)
         previous_point = []
@@ -55,7 +55,7 @@ class evaluation():
 
     def evaluate_wheels(self):
         vis2 = cv2.imread('world4.png')
-        comp2 = cv2.imread('Evaluation/1_annotated.png')
+        comp2 = cv2.imread('Evaluation/world4_annotated.png')
         wheel_img = copy.deepcopy(self.annotated_img)
         ret,wheel_img = cv2.threshold(wheel_img,50,1,cv2.THRESH_BINARY)
 
@@ -86,7 +86,7 @@ class evaluation():
 
         #cv2.imshow('wheels',wheel_img)
         cv2.imshow('wheels',vis2)
-        cv2.imshow('c',comp2)
+        cv2.imshow('c2',comp2)
         k = cv2.waitKey(0)
         return wheel_img
 
