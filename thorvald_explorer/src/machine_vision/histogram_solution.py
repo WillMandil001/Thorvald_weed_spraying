@@ -40,14 +40,15 @@ class convert_to_topo_nav():
 		self.camera_height = 20.5
 		self.wp_interval = 3
 		self.extension_d = 120
-		self.cluster_distance_scalar = 2.5
+		self.cluster_distance_scalar = 15
 		self.max_deviation = 4 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
+		self.image_file = 'world3.png'
 
 	def import_image(self):
 		#image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
 		#self.last_ts = image.header.stamp
 		#cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
-		cv_image = cv2.imread('world4.png')
+		cv_image = cv2.imread(self.image_file)
 		return cv_image
 
 	def remove_soil(self, cv_image):  # ran once to segment the weeds and locate them
@@ -197,10 +198,18 @@ class convert_to_topo_nav():
 						wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
 						wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
+
 		rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
 		sorted_rows = self.order_rows(rows, angle_rad)
 		extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
 		sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
+		self.plot_wp(rows)
+		pdb.set_trace()
+		self.plot_wp(sorted_rows)
+		pdb.set_trace()
+		self.plot_wp(extended_sorted_rows)
+		pdb.set_trace()
+		self.plot_wp(sparse_waypoints)
 
 		extended_sorted_rows_world = self.convert_wplist_to_world(extended_sorted_rows)
 
@@ -229,6 +238,18 @@ class convert_to_topo_nav():
 		# while not rospy.is_shutdown():
 		# 	self.pub_weed_pointcloud.publish(self.wp_point_cloud)
 		# 	rate.sleep()
+
+	def plot_wp(self, wp):
+		color_image = cv2.imread(self.image_file)
+		for row in wp:
+			colour = np.random.rand(3,) * 150
+			for point in row:
+				color_image = cv2.circle(color_image, (point[0], point[1]), 5, colour, 3)
+		cv2.imshow("color_image", color_image)
+		k = cv2.waitKey(0)
+		if k == 27:
+		    pass
+		cv2.destroyAllWindows()
 
 	def convert_wplist_to_world(self, extended_sorted_rows):
 		wp_list_list = []
@@ -364,7 +385,7 @@ class convert_to_topo_nav():
 						# Previous angle is always from the current anchor point
 						# to the immediate next point
 						previous_angle = sign * angle
-						point = tuple(point)
+						prev_point = tuple(point)
 					else:
 						length = math.sqrt(dx**2 + dy**2)
 						delta_angle = (sign * angle) - previous_angle
