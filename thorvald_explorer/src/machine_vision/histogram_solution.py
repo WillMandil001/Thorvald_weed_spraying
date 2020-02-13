@@ -41,15 +41,15 @@ class convert_to_topo_nav():
         self.camera_height = 20.5
         self.wp_interval = 3
         self.extension_d = 120
-        self.cluster_distance_scalar = 15
-        self.max_deviation = 4 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
+        self.cluster_distance_scalar = 10
+        self.max_deviation = 10 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
         
         self.camera_FoV = 26 # in pixels
         self.wheel_centre_distance = 30
         self.wheel_width = 9
 
-        self.image_file = 'world2.png'
-        self.annotated_img_file = 'Evaluation/world2_annotated.png'
+        self.image_file = 'world4.png'
+        self.annotated_img_file = 'Evaluation/world4_annotated.png'
 
     def import_image(self):
         #image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
@@ -205,11 +205,11 @@ class convert_to_topo_nav():
                         wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
                         wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
-
         rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
         sorted_rows = self.order_rows(rows, angle_rad)
         extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
         sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
+ 
         #self.plot_wp(rows)
         #pdb.set_trace()
         #self.plot_wp(sorted_rows)
@@ -217,15 +217,16 @@ class convert_to_topo_nav():
         #self.plot_wp(extended_sorted_rows)
         #pdb.set_trace()
         #self.plot_wp(sparse_waypoints)
+        #pdb.set_trace()
         path_img, overlap1, overlap2 = self.evaluate_camera(sparse_waypoints)
         wheel_img, overlap3, overlap4 = self.evaluate_wheels(sparse_waypoints)
         stats = self.compute_overlap(path_img,wheel_img)
 
-        extended_sorted_rows_world = self.convert_wplist_to_world(extended_sorted_rows)
+        sparse_rows_world = self.convert_wplist_to_world(sparse_waypoints)
 
-        with open("extended_sorted_rows.csv","w") as f:
+        with open("sparse_sorted_rows.csv","w") as f:
             wr = csv.writer(f)
-            wr.writerows(extended_sorted_rows_world)
+            wr.writerows(sparse_rows_world)
 
         ''' Exort waypoint pixel locations for evaluation'''
         # with open('toponav.waypoints', 'wb') as wp_file:
@@ -252,15 +253,16 @@ class convert_to_topo_nav():
 
     def plot_wp(self, wp):
         color_image = cv2.imread(self.image_file)
-        for row in wp:
+        colours = [(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(59,56,49),(135,110,212),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105)]
+        for i,row in enumerate(wp):
             colour = np.random.rand(3,) * 150
             for point in row:
-                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colour, 3)
-        #cv2.imshow("color_image", color_image)
-        #k = cv2.waitKey(0)
-        #if k == 27:
-        #    pass
-        #cv2.destroyAllWindows()
+                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colours[i], 3)
+        cv2.imshow("color_image", color_image)
+        k = cv2.waitKey(0)
+        if k == 27:
+            pass
+        cv2.destroyAllWindows()
 
     def convert_wplist_to_world(self, extended_sorted_rows):
         wp_list_list = []
@@ -579,6 +581,6 @@ if __name__ == '__main__':
     no_soil_image = convert.remove_soil(raw_image)
     convert.evaluation_pipeline(no_soil_image, raw_image)
     # convert.calculate_crop_rows(no_soil_image)
-    # convert.perpendicular_cumulative_sections(no_soil_image, raw_image)
+    #convert.perpendicular_cumulative_sections(no_soil_image, raw_image)
     end = time.time()
     print(end-start)
