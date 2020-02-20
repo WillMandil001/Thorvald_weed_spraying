@@ -39,7 +39,7 @@ class convert_to_topo_nav():
         self.camera_model = image_geometry.PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
         self.camera_height = 20.5
-        self.wp_interval = 3
+        self.wp_interval = 30
         self.extension_d = 120
         self.cluster_distance_scalar = 10
         self.max_deviation = 10 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
@@ -48,7 +48,7 @@ class convert_to_topo_nav():
         self.wheel_centre_distance = 30
         self.wheel_width = 9
 
-        self.image_file = 'RealcropA.png'
+        self.image_file = 'RealcropD.png'
         self.annotated_img_file = 'Evaluation/world4_annotated.png'
 
     def import_image(self):
@@ -77,12 +77,12 @@ class convert_to_topo_nav():
 
             dilate = overlaid
             
-        elif self.image_file == 'RealcropC.png':
+        elif self.image_file == 'RealcropD.png':
             low1 = np.array([0,0,0])
             upp1 = np.array([20,255,255])
             low2 = np.array([90,0,0])
             upp2 = np.array([110,255,255])
-            low3 = np.array([0,0,100])
+            low3 = np.array([0,0,80])
             upp3 = np.array([255,255,165])
             mask1 = cv2.bitwise_not(cv2.inRange(hsv_img, low1, upp1))
             mask2 = cv2.bitwise_not(cv2.inRange(hsv_img, low2, upp2))
@@ -106,8 +106,6 @@ class convert_to_topo_nav():
         if k ==27:
             pass
         cv2.destroyAllWindows()
-        pdb.set_trace()
-
         return dilate
 
     def perpendicular_cumulative_sections(self, cv_image, color_image):
@@ -248,7 +246,9 @@ class convert_to_topo_nav():
         sorted_rows = self.order_rows(rows, angle_rad)
         extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
         sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
- 
+
+        cv2.destroyAllWindows()
+        pdb.set_trace()
         self.plot_wp(rows)
         pdb.set_trace()
         self.plot_wp(sorted_rows)
