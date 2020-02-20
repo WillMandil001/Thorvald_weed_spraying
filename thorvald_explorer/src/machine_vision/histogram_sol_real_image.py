@@ -59,16 +59,54 @@ class convert_to_topo_nav():
         return cv_image
 
     def remove_soil(self, cv_image):  # ran once to segment the weeds and locate them
-        pdb.set_trace()
         hsv_img = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)  # convert to hsv for better color segmentation:
-        lower_green = np.array([20,0,0])
-        upper_green = np.array([255,255,255])
-        mask = cv2.inRange(hsv_img, lower_green, upper_green)
+        self.show_hsv_split(hsv_img)
 
-        kernel = np.ones((3,3),np.uint8)
-        opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-        kernel = np.ones((10,10),np.uint8)
-        dilate = cv2.dilate(opening, kernel, 1)
+        if self.image_file == 'RealcropA.png':
+            low1 = np.array([25,0,0])
+            upp1 = np.array([90,255,255])
+            low2 = np.array([0,25,0])
+            upp2 = np.array([255,135,255])
+            low3 = np.array([0,0,25])
+            upp3 = np.array([255,255,160])
+            mask1 = cv2.inRange(hsv_img, low1, upp1)
+            mask2 = cv2.inRange(hsv_img, low2, upp2)
+            mask3 = cv2.inRange(hsv_img, low3, upp3)
+            overlaid = cv2.bitwise_and(mask1, mask2)
+            overlaid = cv2.bitwise_and(overlaid, mask3)
+
+            dilate = overlaid
+            
+        elif self.image_file == 'RealcropC.png':
+            low1 = np.array([0,0,0])
+            upp1 = np.array([20,255,255])
+            low2 = np.array([90,0,0])
+            upp2 = np.array([110,255,255])
+            low3 = np.array([0,0,100])
+            upp3 = np.array([255,255,165])
+            mask1 = cv2.bitwise_not(cv2.inRange(hsv_img, low1, upp1))
+            mask2 = cv2.bitwise_not(cv2.inRange(hsv_img, low2, upp2))
+            mask3 = cv2.bitwise_not(cv2.inRange(hsv_img, low3, upp3))
+            overlaid = cv2.bitwise_and(mask1, mask2)
+            overlaid = cv2.bitwise_and(overlaid, mask3)
+            
+            kernel = np.ones((3,3),np.uint8)
+            opening = cv2.morphologyEx(overlaid, cv2.MORPH_OPEN, kernel)
+            kernel = np.ones((10,10),np.uint8)
+            dilate = cv2.dilate(opening, kernel, 1)
+
+        cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('mask', 600,600)
+        cv2.imshow('mask', overlaid)
+
+        cv2.namedWindow('dilate',cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('dilate', 600,600)
+        cv2.imshow("dilate", dilate)
+        k = cv2.waitKey(0)
+        if k ==27:
+            pass
+        cv2.destroyAllWindows()
+        pdb.set_trace()
 
         return dilate
 
@@ -572,6 +610,18 @@ class convert_to_topo_nav():
         with open('results/overlap.imgs', 'wb') as wp_file:
             pickle.dump(overlap_array, wp_file)
 
+    def show_hsv_split(self, hsv_img):
+        h,s,v = cv2.split(hsv_img)
+        cv2.namedWindow('h',cv2.WINDOW_NORMAL)
+        cv2.namedWindow('s',cv2.WINDOW_NORMAL)
+        cv2.namedWindow('v',cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('h', 600,600)
+        cv2.resizeWindow('s', 600,600)
+        cv2.resizeWindow('v', 600,600)
+        cv2.imshow("h", h)
+        cv2.imshow("s", s)
+        cv2.imshow("v", v)
+        k = cv2.waitKey(0)
 
 if __name__ == '__main__':
     start = time.time()
@@ -581,8 +631,8 @@ if __name__ == '__main__':
     raw_image = convert.import_image()
     # cv2.imshow("raw_image", raw_image)
     no_soil_image = convert.remove_soil(raw_image)
-    cv2.imshow("no_soil_image", no_soil_image)
-    k = cv2.waitKey(0)
+    #cv2.imshow("no_soil_image", no_soil_image)
+    #k = cv2.waitKey(0)
     #convert.evaluation_pipeline(no_soil_image, raw_image)
     convert.perpendicular_cumulative_sections(no_soil_image, raw_image)
     end = time.time()
