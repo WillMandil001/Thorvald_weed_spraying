@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+
+<launch>
+	<include file="$(find uol_cmp9767m_tutorial)/launch/move_base.launch"/>
+	<node name="thorvald_move_detector" pkg="thorvald_detect_package" type="ros_move_detector.py"/>
+</launch>
