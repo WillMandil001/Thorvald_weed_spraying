@@ -7,6 +7,8 @@
   <arg name="tf_prefix" default="$(arg robot_name)" />
   <arg name="robot_model" default="$(find uol_cmp9767m_base)/config/robot.yaml"/>
   <arg name="model_extras" default="$(find uol_cmp9767m_base)/urdf/sensors.xacro"/>
+
+
   <group ns="$(arg robot_name)">
 
     <!-- model bringup -->
@@ -31,6 +33,10 @@
 
     <!-- spawn robot in gazebo -->
     <node pkg="gazebo_ros" type="spawn_model" name="spawner" args="-urdf -x $(arg x) -y $(arg y) -param robot_description -model $(arg robot_name)" />
-    <node pkg="uol_cmp9767m_base" type="sprayer.py" name="sprayer" />
+
+    <!-- Uncomment for linear or mutliple nozzle sprayer -->
+    <node pkg="uol_cmp9767m_base" type="sprayer_linear.py" name="sprayer" />
+    <!--<node pkg="uol_cmp9767m_base" type="sprayer_multiple_nozzle.py" name="sprayer" />-->
+
   </group>
 </launch>

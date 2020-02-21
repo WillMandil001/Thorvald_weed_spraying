@@ -19,16 +19,11 @@ class Sprayer():
 
         self.last_spray_pos = 0
         self.y_previous = 0
-        self.radius = 0.04  # killbox radius
+        self.radius = 0.5  # killbox radius
 
         self.spray_srv = rospy.ServiceProxy(
             "{}/dynamic_sprayer".format(self.robot),
             y_axes_diff)
-
-        # self.sub = rospy.Subscriber(
-        #     "/weed_map/pointcloud".format(self.robot),
-        #     PointCloud,
-        #     self.spray_weed_callback)
 
         self.sub = rospy.Subscriber(
             "/weed/allpoints/thorvald_001",
@@ -40,6 +35,12 @@ class Sprayer():
         self.sprayed_points_msg = PointCloud()
         self.sprayed_points_pub = rospy.Publisher(
             "{}/weed/sprayed_points/".format(self.robot),
+            PointCloud,
+            queue_size=5)
+
+        self.sprayed_points_indirect_msg = PointCloud()
+        self.sprayed_points_indirect_pub = rospy.Publisher(
+            "{}/weed/sprayed_indirect_points/".format(self.robot),
             PointCloud,
             queue_size=5)
 
@@ -65,7 +66,6 @@ class Sprayer():
 
         # Iterate every detected Weed
         for point in data.points:
-
             # If you see any weeds in current crop line
             # (crop line has a width of 1 meter thats why <0.5)
             if abs(trans[1] - point.y) < 0.5:
@@ -78,10 +78,9 @@ class Sprayer():
 
                 # this creates mirror effect
                 dy = current_y_sprayer - point.y
-                # When sprayer moves, sleep for travel time
-                # self.slep(dy)
-                rospy.sleep(/5)
 
+                # When sprayer moves, sleep for travel time
+                rospy.sleep(2 / 5)
 
                 if dx < self.radius:  # Same as killbox radius
                     if point not in self.sprayed:
@@ -113,7 +112,8 @@ class Sprayer():
 
                         # Call service to spray
                         self.spray_srv(req)
-                        # save the position of the sprayer (visualise in rviz)
+
+                        # save the position of the point (visualise in rviz)
                         real_point = Point32(
                             x_sprayer, rviz_p.point.y, point.z)
 
@@ -121,35 +121,34 @@ class Sprayer():
                         self.real_sprayed.append(real_point)
 
                         # If dist of weed < radius of killbox then save as sprayed
-                        for point2 in data.points:
+                        for point2 in data.points :
                             dist = math.sqrt(math.pow(
                                 point2.x - rviz_p.point.x, 2) + math.pow(point2.y - rviz_p.point.y, 2))
-                            if dist < self.radius:
+                            if dist < self.radius and point2 not in self.sprayed :
+
                                 # add point in sprayed array
                                 self.sprayed.append(point2)
-                                
-                                new_point3 = PointStamped()
-                                new_point3.header.frame_id = "{}/sprayer".format(
-                                    self.robot)
-                                new_point3.header.stamp = rospy.Time()
-                                new_point3.point.x = point2.x
-                                new_point3.point.y = point2.y
-                                rviz_p3 = self.tflistener.transformPoint(
-                                    "map", new_point3)
 
                                 # save the position of the sprayer (visualise in rviz)
                                 real_point2 = Point32(
-                                    x_sprayer, rviz_p3.point.y, point.z)
+                                    x_sprayer, point2.y, point.z)
 
                                 # Save point for visualisation
-                                self.real_sprayed2.append(real_point2)
-                                # TODO counter of points sprayed and detected points
+                                if real_point2 is not real_point:
+                                    self.real_sprayed2.append(real_point2)
+                                print("times i sprayed: ", len(
+                                    self.real_sprayed) , len(self.real_sprayed2))
 
-                        print(current_y_sprayer ,point.y, dy)
+                        print(current_y_sprayer, point.y, dy)
+                        print()
                         self.y_previous = point.y
 
             # Publish the Sprayed Points in RVIZ
-            self.sprayed_points_msg.points = self.real_sprayed2
+            self.sprayed_points_indirect_msg.points = self.real_sprayed2
+            self.sprayed_points_indirect_msg.header.frame_id = 'map'
+            self.sprayed_points_indirect_msg.header.stamp = time
+            self.sprayed_points_indirect_pub.publish(self.sprayed_points_indirect_msg)
+
             self.sprayed_points_msg.points = self.real_sprayed
             self.sprayed_points_msg.header.frame_id = 'map'
             self.sprayed_points_msg.header.stamp = time
