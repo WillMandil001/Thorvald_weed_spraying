@@ -8,7 +8,7 @@
   <!-- <arg name="map_server" default="$(arg fake_localisation)" doc="provide a tf link between map and world and run a map server (default: false)"/> -->
   <arg name="map_server" default="true" doc="provide a tf link between map and world and run a map server (default: false)"/>
   <arg name="gui" default="true" doc="run with visible gazebo"/>
-  <arg name="explorer_robot" default="true" doc="launch a second Thorvald" />
+  <arg name="sprayer_robot" default="true" doc="launch a second Thorvald" />
   <!--  nothing arg is only to run simulation with 3 crop lines-->
   <arg name="nothing" default="false" />
 
@@ -48,17 +48,16 @@
   </include>
 
   <!-- Robot launch-->  
-  <include file="$(f
-
-
-    ind uol_cmp9767m_base)/launch/thorvald.launch">
+  <include file="$(find uol_cmp9767m_base)/launch/thorvald.launch">
     <arg name="robot_name" value="thorvald_001" />
     <!-- <arg name="x" value="5" /> -->
     <arg name="x" value="-8" />
     <arg name="y" value="-3.2" />
   </include>
-  <include file="$(find uol_cmp9767m_base)/launch/thorvald.launch" if="$(arg explorer_robot)">
+  <include file="$(find uol_cmp9767m_base)/launch/thorvald.launch" if="$(arg sprayer_robot)">
     <arg name="robot_name" value="thorvald_002" />
+    <arg name="x" value="-8" />
+    <arg name="y" value="+3.2" />
   </include>
 
   <group if="$(arg world_tf)">
@@ -71,7 +70,7 @@
       name="world_tf_thorvald_002"
       pkg="tf"
       type= "static_transform_publisher"
-      args="0 0 0 0 0 0 /world /thorvald_002/odom 100"  if="$(arg explorer_robot)"/>
+      args="0 0 0 0 0 0 /world /thorvald_002/odom 100"  if="$(arg sprayer_robot)"/>
   </group>
   <group if="$(arg map_server)">
     <node

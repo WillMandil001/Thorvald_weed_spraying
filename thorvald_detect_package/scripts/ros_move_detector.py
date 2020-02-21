@@ -1,40 +1,14 @@
 #!/usr/bin/env python
-
-# Python libs
 import sys
-import threading
-
-# Ros libraries
 import rospy
-
-# Ros Messages
-from std_msgs.msg import String
-
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 class MoveRobot():
 
-    def __init__(self, robot, inputimage=None):
-        self.inputimage = inputimage
+    def __init__(self, robot):
         self.robot = robot
-        self.changerow_pub = rospy.Publisher(
-            "/weed/row/{}".format(self.robot),
-            String,
-            queue_size=10)
-        self.changerow_msg = String()
-
-        threading.Thread(target=self.row_thread, args=()).start()
-
-    def changerow(self, row):
-        self.changerow_msg.data = row
-
-    def row_thread(self):
-        rate = rospy.Rate(10)
-        while not rospy.is_shutdown():
-            self.changerow_pub.publish(self.changerow_msg)
-            rate.sleep()
 
     def movebase_client(self, x, y, z):
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -62,16 +36,12 @@ def main(args):
     '''Initializes and cleanup ros node'''
     rospy.init_node('move_robot', anonymous=True)
     mv_robot = MoveRobot('thorvald_001')
-    # MoveRobot('thorvald_002')
 
-    mv_robot.changerow('simple_inv')
-    mv_robot.movebase_client(-8, -4, 0)
-    mv_robot.movebase_client(-6, 0, -90)
-    mv_robot.movebase_client(6, 0, 0)
-    mv_robot.movebase_client(6, -1.25, 90)
-    mv_robot.movebase_client(-6, -1.25, 90)
+    mv_robot.movebase_client(-6, 0.05, -90)
+    mv_robot.movebase_client(6, 0.05, 0)
+    mv_robot.movebase_client(6, -1.3, 90)
+    mv_robot.movebase_client(-6, -1.3, 90)
     mv_robot.movebase_client(-8, -4, 180)
-    mv_robot.changerow('')
 
 
 

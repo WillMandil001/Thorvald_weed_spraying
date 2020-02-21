@@ -17,26 +17,40 @@ class CanopyClass():
 
     def filter_colors(self, cv_image, runtype):
         hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+
         if runtype == 'simple':
             # hsv = cv2.blur(hsv, (10, 10))
             hsv = cv2.GaussianBlur(hsv, ksize=(17, 17), sigmaX=10)
-            lower_filter = np.array([30, 120, 0])
-            upper_filter = np.array([50, 180, 200])
+            lower_filter = np.array([40, 160, 0])
+            upper_filter = np.array([60, 180, 200])
+
         if runtype == 'simple_inv':
             # hsv = cv2.blur(hsv, (10, 10))
             hsv = cv2.GaussianBlur(hsv, ksize=(17, 17), sigmaX=10)
-            lower_filter = np.array([0, 0, 0])
-            upper_filter = np.array([255, 80, 255])
+
+            lower_filter = np.array([20, 20, 30])
+            upper_filter = np.array([100, 100, 85])
+
+
+
+            #plants
         elif runtype == 'realeasy':
             hsv = cv2.blur(hsv, (40, 40))
             hsv = cv2.GaussianBlur(hsv, ksize=(17, 17), sigmaX=10)
-            lower_filter = np.array([0, 10, 40])
-            upper_filter = np.array([60, 150, 255])
+            lower_filter = np.array([43, 60, 10])
+            upper_filter = np.array([50, 120, 120])
+
+            #weeds
         elif runtype == 'realeasy_inv':
             # hsv = cv2.blur(hsv, (40, 40))
             hsv = cv2.GaussianBlur(hsv, ksize=(17, 17), sigmaX=10)
             lower_filter = np.array([30, 30, 0])
-            upper_filter = np.array([100, 90, 40])
+            upper_filter = np.array([100, 90, 85])
+
+
+
+
         elif runtype == 'realhard':
             hsv = cv2.blur(hsv, (40, 40))
             # hsv = cv2.GaussianBlur(hsv, ksize=(17,17), sigmaX=10)

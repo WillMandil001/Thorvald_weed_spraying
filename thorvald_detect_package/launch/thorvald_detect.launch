@@ -2,7 +2,7 @@
 
 <launch>
 
-	<node name="ros_readimg" pkg="thorvald_detect_and_move_package" type="ros_readimg.py"/>
-	<node name="ros_getpoints" pkg="thorvald_detect_and_move_package" type="ros_getpoints.py"/>
+	<node name="ros_readimg" pkg="thorvald_detect_package" type="ros_readimg.py"/>
+	<node name="ros_getpoints" pkg="thorvald_detect_package" type="ros_getpoints.py"/>
 	
 </launch>

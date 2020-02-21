@@ -79,7 +79,7 @@ class image_projection(CanopyClass):
             print('Changed detection row to: {}'.format(data))
             self.inputimage = data.data
 
-    def publish_points(self, contours, publish):
+    def publish_points(self, contours, publish, variable):
         ''' Publish the points to the default topic '''
         # print('Found points: {}'.format(len(contours)))
         # time = rospy.Time(0)
@@ -92,8 +92,16 @@ class image_projection(CanopyClass):
             x *= 0.493
             y *= 0.493
             z = 0.493
-            if -0.01 <= x <= 0.01:
-                self.points_msg.points.append(Point32(x, y, z))
+
+            if variable:
+                if -0.01 <= x <= 0.01:
+                    self.points_msg.points.append(Point32(x, y, z))
+            else:
+                if -0.1 <= x <= 0.1:
+                    self.points_msg.points.append(Point32(x, y, z))
+
+
+
         print('Found filtered points: {}'.format(len(self.points_msg.points)))
 
         tf_points = self.transformPosition(self.points_msg)
@@ -162,11 +170,11 @@ class image_projection(CanopyClass):
 
         weed, weed_mask = self.filter_colors(ground_inv, self.inputimage)
         cv_image, contours, contours_boxes, contours_points = self.get_contours(weed, cv_image)
-        self.publish_points(contours_points, self.weedpoints_pub.publish)
+        self.publish_points(contours_points, self.weedpoints_pub.publish,True)
 
         plant, plant_mask = self.filter_colors(ground_inv, self.inputimage.replace('_inv', ''))
         cv_image, contours, contours_boxes, contours_points = self.get_contours(plant, cv_image)
-        self.publish_points(contours_points, self.plantpoints_pub.publish)
+        self.publish_points(contours_points, self.plantpoints_pub.publish,False)
 
         contours_s = cv2.resize(cv_image, (0, 0), fx=0.5, fy=0.5)
 
@@ -178,7 +186,7 @@ class image_projection(CanopyClass):
 def main(args):
     '''Initializes and cleanup ros node'''
     rospy.init_node('image_projection', anonymous=True)
-    image_projection('thorvald_001', 'simple_inv')
+    image_projection('thorvald_001',  "simple_inv")
 
     try:
         rospy.spin()
