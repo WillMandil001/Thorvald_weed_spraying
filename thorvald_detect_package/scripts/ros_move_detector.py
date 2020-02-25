@@ -39,6 +39,7 @@ def main(args):
 
     mv_robot.movebase_client(-6, 0.05, -90)
     mv_robot.movebase_client(6, 0.05, 0)
+    
     mv_robot.movebase_client(6, -1.3, 90)
     mv_robot.movebase_client(-6, -1.3, 90)
     mv_robot.movebase_client(-8, -4, 180)

@@ -13,14 +13,35 @@ from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud
 from nav_msgs.msg import Odometry
 
+import csv
+import numpy
+from numpy import savetxt, asarray
+
+plant_file = "plants.csv"
+weed_file = "weeds.csv"
+weeds = []
+w1 = []
+w2 = []
+w3 = []
+w4 = []
+
+plants = []
+
+p1 = []
+p2 = []
+p3 = []
+p4 = []
 
 class image_projection():
 
     def __init__(self, robot):
-        self.robot = robot
         self.weedkeeplist = []
+        self.robot = robot
         self.plantkeeplist = []
         self.notsprayed = []
+
+        
+
         self.spr = rospy.ServiceProxy(
             "{}/spray".format(self.robot),
             Empty)
@@ -115,6 +136,8 @@ class image_projection():
             if not found_close:
                 hasChanged = True
                 self.weedkeeplist.append(point)
+                weeds.append(point)
+                # print(weeds)
                 self.notsprayed.append(point)
 
         if hasChanged:
@@ -137,23 +160,50 @@ class image_projection():
             if not found_close:
                 hasChanged = True
                 self.plantkeeplist.append(point)
+                plants.append(point)
+
                 # self.notsprayed.append(point)
+                
 
         if hasChanged:
             print('Plants Found points: {}'.format(len(self.plantkeeplist)))
         # print(self.plantkeeplist)
 
 
-def main(args):
+
+
+
+if __name__ == '__main__':
     '''Initializes and cleanup ros node'''
     rospy.init_node('get_points', anonymous=True)
     image_projection('thorvald_001')
-
+    csv_columns = ['x','y','z']
     try:
         rospy.spin()
     except KeyboardInterrupt:
         print "Shutting down"
+    
 
+    if rospy.is_shutdown():
+        
+        for weed in weeds:
+            w1.append(weed.x)
+            w2.append(weed.y)
+        w3 = asarray(w1)
+        w4 = asarray(w2)
 
-if __name__ == '__main__':
-    main(sys.argv)
+        for plant in plants:
+            p1.append(plant.x)
+            p2.append(plant.y)
+        p3 = asarray(p1)
+        p4 = asarray(p2)
+
+        savetxt("weedx.csv", w3, delimiter=",")
+        savetxt("weedy.csv", w4, delimiter=",")
+        savetxt("plantx.csv", p3, delimiter=",")
+        savetxt("planty.csv", p4, delimiter=",")
+
+       #  with open("weeds.csv") as f:
+       #      writer = csv.writer(f)
+       #      writer.writerows(weeds)
+       # 
