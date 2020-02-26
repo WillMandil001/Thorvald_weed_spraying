@@ -39,16 +39,17 @@ class convert_to_topo_nav():
         self.camera_model = image_geometry.PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
         self.camera_height = 20.5
-        self.wp_interval = 30
-        self.extension_d = 120
-        self.cluster_distance_scalar = 10
+        self.wp_interval = 5
+        self.extension_d = 12
+        self.cluster_distance_scalar = 13
         self.max_deviation = 10 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
+        self.pixel_peak_clustering_dist = 7
         
         self.camera_FoV = 26 # in pixels
         self.wheel_centre_distance = 30
         self.wheel_width = 9
 
-        self.image_file = 'RealcropD.png'
+        self.image_file = 'RealcropA_2.png'
         self.annotated_img_file = 'Evaluation/world4_annotated.png'
 
     def import_image(self):
@@ -62,22 +63,45 @@ class convert_to_topo_nav():
         hsv_img = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)  # convert to hsv for better color segmentation:
         self.show_hsv_split(hsv_img)
 
-        if self.image_file == 'RealcropA.png':
-            low1 = np.array([25,0,0])
-            upp1 = np.array([90,255,255])
-            low2 = np.array([0,25,0])
-            upp2 = np.array([255,135,255])
-            low3 = np.array([0,0,25])
-            upp3 = np.array([255,255,160])
-            mask1 = cv2.inRange(hsv_img, low1, upp1)
-            mask2 = cv2.inRange(hsv_img, low2, upp2)
-            mask3 = cv2.inRange(hsv_img, low3, upp3)
+        if self.image_file == 'RealcropA_2.png':
+
+            low1 = np.array([0,0,0])
+            upp1 = np.array([30,255,255])
+            low2 = np.array([85,0,0])
+            upp2 = np.array([255,255,255])
+            low3 = np.array([0,0,0])
+            upp3 = np.array([255,255,30])
+            mask1 = cv2.bitwise_not(cv2.inRange(hsv_img, low1, upp1))
+            mask2 = cv2.bitwise_not(cv2.inRange(hsv_img, low2, upp2))
+            mask3 = cv2.bitwise_not(cv2.inRange(hsv_img, low3, upp3))
             overlaid = cv2.bitwise_and(mask1, mask2)
             overlaid = cv2.bitwise_and(overlaid, mask3)
-
-            dilate = overlaid
             
-        elif self.image_file == 'RealcropD.png':
+            kernel = np.ones((3,3),np.uint8)
+            erosion = cv2.erode(overlaid,kernel,iterations = 2)
+
+            result_of_find = cv2.findContours(erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            kj, contours, hierachy = result_of_find
+            threshold = 250
+            list_cnt = []
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if area > threshold:
+                    list_cnt.append(cnt)
+            cv2.drawContours(erosion, list_cnt, -1, 255, -1)
+
+            cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('mask', 600,600)
+            cv2.imshow('mask', erosion)
+
+            k = cv2.waitKey(0)
+            if k ==27:
+                pass
+            return erosion 
+
+
+        elif self.image_file == 'RealcropD_2.png':
+
             low1 = np.array([0,0,0])
             upp1 = np.array([20,255,255])
             low2 = np.array([90,0,0])
@@ -95,18 +119,17 @@ class convert_to_topo_nav():
             kernel = np.ones((10,10),np.uint8)
             dilate = cv2.dilate(opening, kernel, 1)
 
-        cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('mask', 600,600)
-        cv2.imshow('mask', overlaid)
+            cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('mask', 600,600)
+            cv2.imshow('mask', overlaid)
 
-        cv2.namedWindow('dilate',cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('dilate', 600,600)
-        cv2.imshow("dilate", dilate)
-        k = cv2.waitKey(0)
-        if k ==27:
-            pass
-        cv2.destroyAllWindows()
-        return dilate
+            cv2.namedWindow('dilate',cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('dilate', 600,600)
+            cv2.imshow("dilate", dilate)
+            k = cv2.waitKey(0)
+            if k ==27:
+                pass
+            return dilate 
 
     def perpendicular_cumulative_sections(self, cv_image, color_image):
         # cv2.imshow("cv_image", cv_image)
@@ -190,7 +213,7 @@ class convert_to_topo_nav():
         imgy = (cv_image.shape[0] / 2)
 
         cv_image_copy_1 = np.zeros([cv_image.shape[0], cv_image.shape[1]])
-        r = min(imgx, imgy)
+        r = 2 * max(imgx, imgy)
         for a in range(-r, r + 1, max(1, int((r * 2)))):
             xcirc = imgx + a * math.cos(angle_rad)
             ycirc = imgy + a * math.sin(angle_rad)
@@ -200,6 +223,10 @@ class convert_to_topo_nav():
         cumulative_list = []
         wp_pose_list = []
         wp_pixel_list = []
+
+        wp_pose_list_c = []
+        wp_pixel_list_c = []
+
         for i in range(0, len(indices[0])):
             if i % self.wp_interval == 1:
                 cv_image_copy_2 = np.zeros([cv_image.shape[0], cv_image.shape[1]])
@@ -220,42 +247,84 @@ class convert_to_topo_nav():
                         waypoint_graph_coords.append([0, coordinates[0][coord], coordinates[1][coord]])
                         waypoint_graph.append(0)
 
-                peaks, _ = find_peaks(waypoint_graph, height=0)
-                if len(peaks) != 0:
-                    mean_peak_list = self.cluster_analysis(peaks, 20)
+                peak_all = []
+                peaks, properties = find_peaks(waypoint_graph, height=0)
+                for index,point in enumerate(waypoint_graph):
+                    if point == 1:
+                        peak_all.append(waypoint_graph_coords[index])
 
-                #print("peaks: ", peaks)
-                plt.plot(waypoint_graph)
-                if len(peaks) != 0:
-                    for p in mean_peak_list:
-                        plt.plot(p, 1, "x")
-                plt.ylabel(('state_' + str(i)))
-                plt.ylim([0, 2])
-                # plt.savefig('WAYPOINTPLOTSMEAN_state_' + str(i))
-                plt.clf()
+                left_edge = None
+                sparse_peaks = []
+                for i,p in enumerate(peak_all):
+                    if not left_edge:
+                        left_edge = (p[1],p[2])
+                        previous_point = p
+                    elif i == len(peak_all) - 1:
+                        right_edge = (p[1],p[2])
+                        peak_coordinate = [(right_edge[1]+left_edge[1])/2,(right_edge[0]+left_edge[0])/2]
+                        wp_pixel_list_c.append(peak_coordinate)
+                        left_edge = None
+
+                    else:
+                        if self.euclidean_dist(previous_point[1], previous_point[2],p[1],p[2]) > self.pixel_peak_clustering_dist:
+                            right_edge = (previous_point[1],previous_point[2])
+                            peak_coordinate = [(right_edge[1]+left_edge[1])/2,(right_edge[0]+left_edge[0])/2]
+                            wp_pixel_list_c.append(peak_coordinate)
+                            previous_point = None
+                            left_edge = None
+                        else:
+                            previous_point = p
+
+                # wp_pixel_list_c.append(sparse_peaks)
+                # #print("peaks: ", peaks)
+                # plt.plot(waypoint_graph)
+                # if len(peaks) != 0:
+                #     # for p, prop in zip(peaks, properties):
+                #         # plt.plot(p, 1, "o")
+                #     for p in mean_peak_list:
+                #         plt.plot(p, 1, "x")
+                # plt.ylabel(('state_' + str(i)))
+                # plt.ylim([0, 2])
+                # # plt.savefig('WAYPOINTPLOTSMEAN_state_' + str(i))
+                # plt.clf()
+
+                # # now plot peaks on cv_image:::
+                # if len(peaks) != 0:
+                #     for pk in peaks:
+                #         radius = 5
+                #         # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3)
+                #         wp_pose_list_c.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
+                #         wp_pixel_list_c.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
                 # now plot peaks on cv_image:::
-                if len(peaks) != 0:
-                    for pk in mean_peak_list:
-                        radius = 5
-                        # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3)
-                        wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
-                        wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
+                # if len(peaks) != 0:
+                #     for pk in mean_peak_list:
+                #         radius = 5
+                #         # color_image = cv2.circle(color_image, (waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]), radius, (150, 20, 20), 3)
+                #         wp_pose_list.append(self.convert_to_world_pose(waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]))
+                #         wp_pixel_list.append([waypoint_graph_coords[pk][2], waypoint_graph_coords[pk][1]])
 
-        rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
-        sorted_rows = self.order_rows(rows, angle_rad)
+        # for point in wp_pixel_list_c:
+        #     color_image = cv2.circle(color_image, (point[1], point[0]), 5, (150, 20, 20), 3)
+        # cv2.imshow("sparse_peaks",color_image)
+        # cv2.waitKey(0)
+
+        #rows = self.classify(wp_pixel_list, self.cluster_distance_scalar *self.wp_interval)
+        rows_c = self.classify(wp_pixel_list_c, self.cluster_distance_scalar)
+
+        sorted_rows = self.order_rows(rows_c, angle_rad)
         extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
         sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
 
-        cv2.destroyAllWindows()
+        self.plot_wp(rows_c, "rows_c")
         pdb.set_trace()
-        self.plot_wp(rows)
+        #self.plot_wp(rows, "rows")
+        #pdb.set_trace()
+        self.plot_wp(sorted_rows, "colour_im")
         pdb.set_trace()
-        self.plot_wp(sorted_rows)
+        self.plot_wp(extended_sorted_rows, "colour_im")
         pdb.set_trace()
-        self.plot_wp(extended_sorted_rows)
-        pdb.set_trace()
-        self.plot_wp(sparse_waypoints)
+        self.plot_wp(sparse_waypoints, "colour_im")
         pdb.set_trace()
         path_img, overlap1, overlap2 = self.evaluate_camera(sparse_waypoints)
         wheel_img, overlap3, overlap4 = self.evaluate_wheels(sparse_waypoints)
@@ -290,18 +359,18 @@ class convert_to_topo_nav():
         #   rate.sleep()
         return stats, color_image, overlap1, overlap2, overlap3, overlap4
 
-    def plot_wp(self, wp):
+    def plot_wp(self, wp, name):
         color_image = cv2.imread(self.image_file)
         colours = [(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(59,56,49),(135,110,212),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105)]
         for i,row in enumerate(wp):
             colour = np.random.rand(3,) * 150
             for point in row:
-                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colours[i], 3)
-        cv2.imshow("color_image", color_image)
+                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colour, 3)
+        cv2.imshow(name, color_image)
         k = cv2.waitKey(0)
         if k == 27:
             pass
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
 
     def convert_wplist_to_world(self, extended_sorted_rows):
         wp_list_list = []
@@ -342,6 +411,7 @@ class convert_to_topo_nav():
         row_count = -1 # to keep track of the current class
         next_to_check = [] # to keep track of which other points within the same class need to be examinred before moving on
 
+        pdb.set_trace()
         while len(waypoints) > 0:
             if len(next_to_check) == 0:
                 # Move on to a new starting point if the current thread is fully explored
@@ -585,10 +655,13 @@ class convert_to_topo_nav():
                 groups[-1].append(x)
             else:
                 groups.append([x])
-        for p in groups:
-            mean_peak_list.append(sum(p) / len(p))
 
-        return mean_peak_list
+        for p in groups:
+            p[0]
+        # for p in groups:
+        #     mean_peak_list.append(sum(p) / len(p))
+
+        # return mean_peak_list
 
     def evaluation_pipeline(self, no_soil_im, raw_im):
         deviations = range(1,21)
