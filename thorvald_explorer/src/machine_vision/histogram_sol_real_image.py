@@ -27,41 +27,51 @@ import time
 
 class convert_to_topo_nav():
     def __init__(self):
+
+        # Hyper parameters
+        self.input_image_topic = "/thorvald_001/kinect2_camera/hd/image_color_rect"
+        self.camera_info_topic = "/thorvald_001/kinect2_camera/hd/camera_info"
+        self.camera_height = 20.5 # z-height of the captured aerial image
+        self.wp_interval = 5
+        self.extension_d = 12 # distance of extension to leave maneuvering space outside the crop rows
+        self.cluster_distance_scalar = 13
+        self.max_deviation = 8 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
+        self.pixel_peak_clustering_dist = 7
+
+        # The following needed for evaluation with annotated images only
+        self.camera_FoV = 26 # in pixels
+        self.wheel_centre_distance = 30 # lateral distance from robot centre to wheels
+        self.wheel_width = 9
+        self.image_file = 'RealcropA_2.png'
+        #self.annotated_img_file = 'Evaluation/world4_annotated.png'
+
+        # Initialisation
         self.bridge = CvBridge()
         self.listener = tf.TransformListener()
         self.tf2Buffer = tf2_ros.Buffer()
         self.tf2listener = tf2_ros.TransformListener(self.tf2Buffer)
         self.br = tf.TransformBroadcaster()
-        self.camera_info = rospy.wait_for_message('/thorvald_002/kinect2_camera/hd/camera_info', CameraInfo)
+        self.camera_info = rospy.wait_for_message(self.camera_info_topic, CameraInfo)
         self.pub_weed_pointcloud = rospy.Publisher("/way_points/pointcloud", PointCloud, queue_size=1)
         self.wp_point_cloud = PointCloud()
         self.wp_point_cloud.header.frame_id = 'map'
         self.camera_model = image_geometry.PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
-        self.camera_height = 20.5
-        self.wp_interval = 5
-        self.extension_d = 12
-        self.cluster_distance_scalar = 13
-        self.max_deviation = 10 # max permitted deviation perpendicular to the angle of travel (used to make map sparse)
-        self.pixel_peak_clustering_dist = 7
-        
-        self.camera_FoV = 26 # in pixels
-        self.wheel_centre_distance = 30
-        self.wheel_width = 9
-
-        self.image_file = 'RealcropA_2.png'
-        self.annotated_img_file = 'Evaluation/world4_annotated.png'
 
     def import_image(self):
-        #image = rospy.wait_for_message("/thorvald_002/kinect2_camera/hd/image_color_rect", Image)
-        #self.last_ts = image.header.stamp
-        #cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
+        # Get an aerial image from the camera topic
+        pdb.set_trace()
+        image = rospy.wait_for_message(self.input_image_topic, Image)
+        self.last_ts = image.header.stamp
+        cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
+        # Alternatively read aerial image from file
         cv_image = cv2.imread(self.image_file)
+        pdb.set_trace()
         return cv_image
 
     def remove_soil(self, cv_image):  # ran once to segment the weeds and locate them
         hsv_img = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)  # convert to hsv for better color segmentation:
-        self.show_hsv_split(hsv_img)
+        #self.show_hsv_split(hsv_img)
 
         if self.image_file == 'RealcropA_2.png':
 
@@ -76,7 +86,7 @@ class convert_to_topo_nav():
             mask3 = cv2.bitwise_not(cv2.inRange(hsv_img, low3, upp3))
             overlaid = cv2.bitwise_and(mask1, mask2)
             overlaid = cv2.bitwise_and(overlaid, mask3)
-            
+
             kernel = np.ones((3,3),np.uint8)
             erosion = cv2.erode(overlaid,kernel,iterations = 2)
 
@@ -90,14 +100,14 @@ class convert_to_topo_nav():
                     list_cnt.append(cnt)
             cv2.drawContours(erosion, list_cnt, -1, 255, -1)
 
-            cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('mask', 600,600)
-            cv2.imshow('mask', erosion)
+            #cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
+            #cv2.resizeWindow('mask', 600,600)
+            #cv2.imshow('mask', erosion)
 
-            k = cv2.waitKey(0)
-            if k ==27:
-                pass
-            return erosion 
+            #k = cv2.waitKey(0)
+            #if k ==27:
+        #        pass
+            return erosion
 
 
         elif self.image_file == 'RealcropD_2.png':
@@ -113,23 +123,23 @@ class convert_to_topo_nav():
             mask3 = cv2.bitwise_not(cv2.inRange(hsv_img, low3, upp3))
             overlaid = cv2.bitwise_and(mask1, mask2)
             overlaid = cv2.bitwise_and(overlaid, mask3)
-            
+
             kernel = np.ones((3,3),np.uint8)
             opening = cv2.morphologyEx(overlaid, cv2.MORPH_OPEN, kernel)
             kernel = np.ones((10,10),np.uint8)
             dilate = cv2.dilate(opening, kernel, 1)
 
-            cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('mask', 600,600)
-            cv2.imshow('mask', overlaid)
-
-            cv2.namedWindow('dilate',cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('dilate', 600,600)
-            cv2.imshow("dilate", dilate)
-            k = cv2.waitKey(0)
-            if k ==27:
-                pass
-            return dilate 
+            # cv2.namedWindow('mask',cv2.WINDOW_NORMAL)
+            # cv2.resizeWindow('mask', 600,600)
+            # cv2.imshow('mask', overlaid)
+            #
+            # cv2.namedWindow('dilate',cv2.WINDOW_NORMAL)
+            # cv2.resizeWindow('dilate', 600,600)
+            # cv2.imshow("dilate", dilate)
+            #k = cv2.waitKey(0)
+            #if k ==27:
+        #        pass
+            return dilate
 
     def perpendicular_cumulative_sections(self, cv_image, color_image):
         # cv2.imshow("cv_image", cv_image)
@@ -316,27 +326,32 @@ class convert_to_topo_nav():
         extended_sorted_rows = self.extend_points(sorted_rows, angle_rad)
         sparse_waypoints = self.drop_redundant_wp(extended_sorted_rows)
 
-        self.plot_wp(rows_c, "rows_c")
-        pdb.set_trace()
+        '''PLOTTING intermediate results'''
+        #self.plot_wp(rows_c, "rows_c")
+        #pdb.set_trace()
         #self.plot_wp(rows, "rows")
         #pdb.set_trace()
-        self.plot_wp(sorted_rows, "colour_im")
-        pdb.set_trace()
-        self.plot_wp(extended_sorted_rows, "colour_im")
-        pdb.set_trace()
-        self.plot_wp(sparse_waypoints, "colour_im")
-        pdb.set_trace()
-        path_img, overlap1, overlap2 = self.evaluate_camera(sparse_waypoints)
-        wheel_img, overlap3, overlap4 = self.evaluate_wheels(sparse_waypoints)
-        stats = self.compute_overlap(path_img,wheel_img)
+        #self.plot_wp(sorted_rows, "colour_im")
+        #pdb.set_trace()
+        #self.plot_wp(extended_sorted_rows, "colour_im")
+        #pdb.set_trace()
+        self.plot_wp(sparse_waypoints, "colour_im") # plots the final sparse topological map locations
+        pdb.set_trace() # pauses the program so you can inspect or save the image, continue with 'q'
+
+
+        ''' This is only for evaluation with annotated ground thruth images'''
+        #path_img, overlap1, overlap2 = self.evaluate_camera(sparse_waypoints)
+        #wheel_img, overlap3, overlap4 = self.evaluate_wheels(sparse_waypoints)
+        #stats = self.compute_overlap(path_img,wheel_img)
 
         sparse_rows_world = self.convert_wplist_to_world(sparse_waypoints)
 
         with open("sparse_sorted_rows.csv","w") as f:
             wr = csv.writer(f)
             wr.writerows(sparse_rows_world)
+            # Results are written to file
 
-        ''' Exort waypoint pixel locations for evaluation'''
+        #''' Exort waypoint pixel locations for evaluation'''
         # with open('toponav.waypoints', 'wb') as wp_file:
         #   pickle.dump(extended_sorted_rows, wp_file)
 
@@ -344,7 +359,7 @@ class convert_to_topo_nav():
         for row in sparse_waypoints:
             colour = np.random.rand(3,) * 150
             for point in row:
-                color_image = cv2.circle(color_image, (point[0], point[1]), radius, colour, 3)
+                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colour, 3)
         #cv2.imshow("color_image", color_image)
         #k = cv2.waitKey(0)
         #if k == 27:
@@ -352,20 +367,20 @@ class convert_to_topo_nav():
         #cv2.destroyAllWindows()
 
         ''' Publish the point cloud:'''
-        # self.visualization_of_waypoints(extended_sorted_rows_world)
-        # rate = rospy.Rate(10)
-        # while not rospy.is_shutdown():
-        #   self.pub_weed_pointcloud.publish(self.wp_point_cloud)
-        #   rate.sleep()
+        self.visualization_of_waypoints(sparse_rows_world)
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.pub_weed_pointcloud.publish(self.wp_point_cloud)
+            rate.sleep()
         return stats, color_image, overlap1, overlap2, overlap3, overlap4
 
     def plot_wp(self, wp, name):
         color_image = cv2.imread(self.image_file)
-        colours = [(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(59,56,49),(135,110,212),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105)]
+        colours = [(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(59,56,49),(135,110,212),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105),(59,56,49),(135,110,212),(245, 69, 66),(21, 21,214),(30,168,214),(23,194,37), (123,135,55),(100,13,105)]
         for i,row in enumerate(wp):
             colour = np.random.rand(3,) * 150
             for point in row:
-                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colour, 3)
+                color_image = cv2.circle(color_image, (point[0], point[1]), 5, colours[i], 3)
         cv2.imshow(name, color_image)
         k = cv2.waitKey(0)
         if k == 27:
@@ -411,7 +426,7 @@ class convert_to_topo_nav():
         row_count = -1 # to keep track of the current class
         next_to_check = [] # to keep track of which other points within the same class need to be examinred before moving on
 
-        pdb.set_trace()
+        #pdb.set_trace()
         while len(waypoints) > 0:
             if len(next_to_check) == 0:
                 # Move on to a new starting point if the current thread is fully explored
@@ -539,7 +554,7 @@ class convert_to_topo_nav():
 
 
     def evaluate_camera(self, wp):
-        ''' 
+        '''
         Evaluates the area covered by the ground robot's camera
         Plotting has been commented for now
         '''
@@ -569,7 +584,7 @@ class convert_to_topo_nav():
 
 
     def evaluate_wheels(self, wp):
-        ''' 
+        '''
         Evaluates the area covered by the ground robot's wheels
         Plotting has been commented for now
         '''
@@ -697,8 +712,6 @@ class convert_to_topo_nav():
         k = cv2.waitKey(0)
 
 if __name__ == '__main__':
-    start = time.time()
-
     rospy.init_node('convert_to_topo_nav', anonymous=True)
     convert = convert_to_topo_nav()
     raw_image = convert.import_image()
@@ -706,7 +719,5 @@ if __name__ == '__main__':
     no_soil_image = convert.remove_soil(raw_image)
     #cv2.imshow("no_soil_image", no_soil_image)
     #k = cv2.waitKey(0)
-    #convert.evaluation_pipeline(no_soil_image, raw_image)
+    #convert.evaluation_pipeline(no_soil_image, raw_image) # This is only needed for evaluation on annotated images
     convert.perpendicular_cumulative_sections(no_soil_image, raw_image)
-    end = time.time()
-    print(end-start)
