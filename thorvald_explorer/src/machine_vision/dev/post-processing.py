@@ -40,7 +40,7 @@ class post_processing():
 						# Previous angle is always from the current anchor point
 						# to the immediate next point
 						previous_angle = sign * angle
-						point = tuple(point)
+						prev_point = tuple(point)
 					else:
 						length = math.sqrt(dx**2 + dy**2)
 						delta_angle = (sign * angle) - previous_angle
